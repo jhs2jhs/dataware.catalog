@@ -1,0 +1,204 @@
+<html>
+<head>
+	<script type="text/javascript" src="jquery-1.6.min.js"></script>
+	<script type="text/javascript" src="distillation.js"></script>
+	<script type="text/javascript" src="parser.js"></script>
+	<script>
+	
+	/** 
+	 * This is the Controller Script for the Google Chrome Datware.
+	 * It receives requests from the content and popup scripts.
+     
+	 * TODO: Keep track of IP Address
+	 * TODO: Make the icon default to "logged out" when turned on.
+	 * TODO: Implement "new user"
+	 * TODO: "Key" currently isn't doing anything
+	 * TODO: Linguistic Processing (i.e. write the query!)
+	 * TODO: Add bulk inserts + remove print statements.
+	 * TODO: Currently the "back button" will still refresh the page!?
+	 * TODO: There is a threading error - mysql cannot update pages as well as doing the web counts!?
+	 * TODO: Stress Test
+	 * TODO: Create logs 
+	 *	- processing log (i.e. "Completed Distallation")
+	 *  - logins (including ip addresses)
+	 *  - logouts
+	 *  - errors!
+	 * TODO: Get the stuff sending to the AMI server and not localhost
+	 * TODO: Implement a resend on the caching system
+	 * TODO: Improve the popup.html so that the info for the current page is visible
+	 * TODO: We should probably ignore search results? Lots of ambiguous stuff there? Maybe take search terms instead?
+	 */
+
+	//-- Constants for this implementation.
+	DOCUMENT_TYPE = "web";
+	APPLICATION_NAME = "Google Chrome";
+	PREFSTORE = "http://myprefstore.com/"
+
+	//-- Listener to receive word vectors from the content script.
+	chrome.extension.onRequest.addListener(
+		function( request, sender, sendResponse ) {
+			processVector( request.text, sender.tab.url, sender.tab.title );
+		}
+	);
+
+
+    /**
+     * Main entry point to the script - contentScript.js essentially 
+	 * bundles up the text from a web page ready for parsing, and 
+	 * transmitting to the prefstore
+	 */
+	function processVector( text, url, title ) {
+	
+		//-- Load up user data.
+		logged_in = window.localStorage.getItem( "logged_in" );
+		jid = window.localStorage.getItem( "jid" );
+		key = window.localStorage.getItem( "key" );
+		
+		//-- if the user is logged in (and we have their details, then we 
+		//-- can organize sending the date to their prefstore. Otherwise
+		//-- for the moment lets just ignore it.
+		if ( logged_in == "SUCCESSFUL" && jid && key ) {
+
+			//-- parse the text with min_word_length 3, min_support 3
+			doc = new Parser( text, 3, 3 );
+
+			//-- create the distillation object (default duration to 10s for now)
+			var distillation = new Distillation( doc.fv, url, 10, title, doc.totalWords );
+
+			//-- store the current page being observed, for the stats dropdown.
+			window.localStorage.setItem( "lastPage", distillation.stringify() );
+			window.localStorage.setItem( "lastPageStatus", null );
+			incrementUserStat( "pagesAnalysed" );
+
+			//-- transmit to the prefstore
+			//-- TODO: only send it at a certain time, when cache is full, etc.
+			chrome.browserAction.setIcon({path:"icon-progress.png"});
+			transmitDistillation( distillation );
+			incrementUserStat( "pagesSent" );
+		}	
+	}
+	
+
+	/**
+     * Using AJAX, transmit the vector to the user's prefstore.
+	 */
+	function transmitDistillation( distillation ) {
+
+		//-- attempt to send the distill to the prefstore
+		jQuery.ajax({ 
+			type : "POST", 
+			data : "data=" + distillation.stringify(),
+			url : "http://localhost:8080/submitDistill", 
+			cache : false,
+			timeout : 30000,
+			error : function( data ) { transmitFailure( distillation, data ); },
+			success : function( data ) { transmitSuccess( distillation, data ); }
+		});
+	}
+
+	
+	/**
+     * When a transmission is successful, we still need to check whether
+	 * the distillation was successfully processed by the server
+	 */
+	function transmitSuccess( distillation, response ) {
+		
+		//-- parse the response
+		var result = eval( '(' + response + ')' ); 
+
+		if ( result.success ) {
+			processSuccess( distillation );
+		}
+		else {
+			processFailure( distillation, "delivery failure: " + result.cause );
+		}
+	}
+
+
+	/**
+     * The following function is fired when for some reason the distillation
+	 * that we packaged up and sent did not reach the server
+	 */
+	function transmitFailure( distillation, response ) {
+
+		//-- Error find the submitDistill endpoint
+		if ( response.status == 404 ) {
+			processFailure( distillation, "delivery failure - API unreachable (404)" );
+		}
+
+		//-- Error reaching the server
+		else if ( response.status == 0 ) {
+			processFailure( distillation, "delivery failure - Server unreachable (OOO)" );
+		}
+
+		//-- An unknown error has occurred
+		else {
+			processFailure( distillation, "delivery failure - Cause unknown (" + response.status + ")" );
+		}
+	}
+
+
+	/**
+     * When a failure occurs we can cache the page visited and try again later
+	 */
+	function processSuccess( distillation ) {
+
+		//-- TODO: change the logo to a tick for this page.
+		chrome.browserAction.setIcon({path:"icon-success.png"});
+		chrome.browserAction.setBadgeText({text:""});
+
+		//-- update user statistics
+		incrementUserStat( "pagesComplete" );
+
+		//-- change last page to be successfully sent
+		window.localStorage.setItem( "lastPageStatus", "delivered successfully" );
+
+		//-- no. distillations
+	}
+
+
+	/**
+     * When a failure occurs we can cache the page visited and try again later
+	 */
+	function processFailure( distillation, cause ) {
+
+		//-- update the favicon information to reflect the failure
+		chrome.browserAction.setIcon({path:"icon-failure.png"});
+		chrome.browserAction.setBadgeText({text:""});
+		
+		//-- specify that the "last page" failed
+		window.localStorage.setItem( "lastPageStatus", cause );
+
+		//-- add the page to the errorCache, ready for another  
+		//-- attempt by first obtaining the cache...
+		/*
+		errorCacheJson = window.localStorage.getItem( "errorCache" );
+		var errorCache = eval('(' + errorCacheJson + ')'); 
+		
+		//-- (creating the cache if it didn't exist)
+		if ( errorCache == null )
+			errorCache = new Array();
+
+		//-- adding the failed distillation to the cache 
+		errorCache.push( distillation );
+
+		//-- and finally restoring it to local storage ready for future reattempts
+		window.localStorage.setItem( "errorCache", JSON.stringify( errorCache ) );
+		*/
+		
+	}
+
+
+	/**
+	 * Update user statistics by first retrieving them from the data store
+	 * before simply incrementing, and rewriting back to the local data store
+	 */
+	function incrementUserStat( parameter ) {
+		amount = window.localStorage.getItem( parameter );
+		if ( !amount ) amount = 0;
+		window.localStorage.setItem( parameter, ++amount );
+	}
+	</script>
+
+</head>
+</html>

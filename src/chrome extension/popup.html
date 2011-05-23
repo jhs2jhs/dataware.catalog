@@ -1,0 +1,479 @@
+<style>
+body {
+  width: 350px;
+}
+
+
+img {
+  margin:5px;
+}
+
+form input {
+	border: 1px solid #aaa;
+	margin-top: -3px; 
+}
+
+form input.text {
+    font-size: 11px;
+    width: 132px;
+    padding: 2px;
+}
+
+.displayBox{
+	width: 190px; 
+	height: 80px; 
+	display: none; 
+	margin-left: 127px; 
+	padding-top: 8px; 
+	font-size: 13px;
+	font-family: 'Times New Roman';"
+}
+
+.displayBox .right {
+	margin-left: 60px;
+	border: 0px solid gray; 
+	height: 25px;
+}
+
+.displayBox .left {
+	float: left;
+}
+
+.loginMessage {
+	float:left;
+	color:red;
+	font-family:arial;
+	font-size:10px;
+	padding-top:2px;
+	font-weight:bold;
+}
+
+.displayBox .links {
+	margin-top: -5px; 
+	text-align: right;
+}
+
+.currentPageDisplayBox {
+	font-size: 11px;
+	margin: 0px 10px 0px 10px; 
+	border-top: 1px solid gray; 
+	padding-top: 10px;
+	font-family: 'georgia';
+}
+
+.day {
+	font-family: georgia;
+	font-size: 11px;
+	font-weight: bold;
+	background-color: #f4f4ff;
+	color: #666688;
+	border-top: 1px solid #dddddd;
+	height: 13px;
+	padding: 5px;
+}
+
+.entry {
+	background-color: #ffffff;
+	border-top: 1px dotted #dddddd;
+	padding: 5px 5px 5px 20px;
+}
+
+.blockNum {
+	border: 1px dotted #ccccdd;
+	background-color: #eeeeff;
+	color: #666688;
+	font-weight: bold;
+	padding: 0px 3px 0px 3px;
+}
+
+.blockTerm {
+	color: #666688;
+	background-color: #f4f4ff;
+	font-size: 11px;
+	white-space: nowrap;
+}
+
+</style>
+
+<script type="text/javascript" src="jquery-1.6.min.js"></script>
+<script>
+
+	/** 
+	 * Model for the info page
+	 */
+	var divNames = new Array()
+	divNames[0] = "loggedInBox"
+	divNames[1] = "loggedOutBox"
+	divNames[2] = "newUserBox"
+
+	logged_in = window.localStorage.getItem( "logged_in" );
+	jid = window.localStorage.getItem( "jid" );
+	key = window.localStorage.getItem( "logged_in" );
+	new_user = window.localStorage.getItem( "new_user" );
+
+	/**
+	 * Main function for the page. Also used for a 'refresh'
+	 * when actions occur
+	 */ 
+	function refresh( duration ) {
+
+		$( '#jid' ).val( this.jid );
+		$( '#username' ).html( this.jid ) 
+
+		logged_in = window.localStorage.getItem( "logged_in" );
+		jid = window.localStorage.getItem( "jid" );
+		key = window.localStorage.getItem( "logged_in" );
+		new_user = window.localStorage.getItem( "new_user" );
+
+		//-- create the appropriate information box
+		if ( new_user ) {
+			displayBox( "newUserBox", duration );
+		}
+		else if ( logged_in == "PENDING" ) {
+			displayBox( "loggedOutBox", duration );
+		}
+		else if ( logged_in == "SUCCESSFUL" ) {
+			
+			displayBox( "loggedInBox", duration );
+		}
+		else {
+			chrome.browserAction.setIcon({path:"icon-dormant.png"});
+			displayBox( "loggedOutBox", duration );
+		}
+
+		UpdateCurrentPageBox( duration );
+	}
+
+
+	/**
+	 *
+	 */
+	function UpdateCurrentPageBox( duration ) {
+
+		if ( logged_in == "SUCCESSFUL" ) {
+
+			pagesAnalysed = window.localStorage.getItem( "pagesAnalysed" );
+			pagesSent = window.localStorage.getItem( "pagesSent" );
+			pagesComplete = window.localStorage.getItem( "pagesComplete" );
+
+			pagesSent = pagesSent ? pagesSent : 0;
+			pagesComplete = pagesComplete ? pagesComplete : 0;
+			pagesAnalysed = pagesAnalysed ? pagesAnalysed : 0;
+
+			errorCacheJson = window.localStorage.getItem( "errorCache" );
+			var errorCache = eval('(' + errorCacheJson + ')'); 
+			pagesCached = errorCache ? errorCache.length : 0;
+
+			lastPage = eval( '(' + window.localStorage.getItem( "lastPage" ) + ')' );  
+			lastPageStatus = window.localStorage.getItem( "lastPageStatus" );
+
+			$( '#termlist' ).html( "" );
+			fvLength = 0;
+			$.each(lastPage.fv, function( key, value ){ 
+				fvLength++;
+				$( '#termlist' ).append( " <span class='blockTerm'><span class='blockNum'>" + value + "</span> " + key + " </span> &nbsp;"  );
+			}); 
+
+			$( '#pagesAnalysed' ).html( "Pages distilled: " + pagesAnalysed );
+			$( '#pagesSent' ).html( "Deliveries attempted: " + pagesSent );
+			$( '#pagesComplete' ).html( "Deliveries completed: " + pagesComplete );
+			$( '#pagesCached' ).html( "Distillations cached: " + pagesCached );
+
+			$( '#pageTitle' ).html( "Page Title: " + lastPage.docName.substring(0, 20) + "..." );
+			$( '#pageStats' ).html( "Stats: " + lastPage.totalWords + " words / " + fvLength + " terms extracted" );
+			$( '#pageStatus' ).html( "Status: <i>" + lastPageStatus + "</i>" );
+
+			$( '#currentPageBox' ).show( duration );
+		}
+		else {
+			$( '#currentPageBox' ).hide( duration );
+		}
+	}
+
+
+	/**
+	 * Function that hides or displays boxes depending on 
+	 * the state of the model
+	 */ 
+	function displayBox( divToShow, duration ) {
+
+		for( i = 0; i < divNames.length; i++ ) {
+			if ( divToShow == divNames[ i ] ) {
+				$( '#' + divNames[ i ] ).show( duration );
+			} 
+			else {
+				$( '#' + divNames[ i ] ).hide( duration );
+			}
+		}
+	}
+
+
+	/**
+	 *
+	 */
+	function logout() {
+		
+		window.localStorage.removeItem( "logged_in" );
+		window.localStorage.removeItem( "key" ); 
+		$( '#password' ).val( "" );		
+		refresh( 300 );
+	}
+
+
+	/**
+	 *
+	 */
+	function login() {
+
+		window.localStorage.setItem( "jid", $( '#jid' ).val()  );
+		window.localStorage.setItem( "logged_in", "PENDING" );
+		this.jid = $( '#jid' ).val() 
+
+
+		//-- disable everything while we try and login
+		$( '#jid' ).attr( "disabled", true ); 
+		$( '#password' ).attr( "disabled", true ); 
+
+		data = "data={\"user\":\"" + this.jid + "\",\"pass\":\"" + $( '#password' ).val() + "\"}";
+		
+		//-- attempt to send the distill to the prefstore
+		jQuery.ajax({ 
+			type : "POST", 
+			data : data,
+			url : "http://localhost:8080/login", 
+			cache : false,
+			timeout : 15000,
+			error : function( data ) { transmitFailure( data ); },
+			success : function( data ) { transmitLoginSuccess( data ); }
+		});
+
+		refresh( 300 );
+	}
+
+	
+	/**
+	 * function to clean term before transmission
+	 * this would remove SQL injection, check length and 
+	 */
+	 function cleanTerm() {
+	 }
+
+
+
+	/**
+	 *
+	 */
+	function newUser() {
+
+		window.localStorage.setItem( "jid", $( '#jid' ).val()  );
+		window.localStorage.setItem( "logged_in", "PENDING" );
+		this.jid = $( '#jid' ).val() 
+
+
+		//-- disable everything while we try and login
+		$( '#jid' ).attr( "disabled", true ); 
+		$( '#password' ).attr( "disabled", true ); 
+
+		data = "data={\"user\":\"" + this.jid + "\",\"pass\":\"" + $( '#password' ).val() + "\"}";
+		
+		//-- attempt to send the distill to the prefstore
+		jQuery.ajax({ 
+			type : "POST", 
+			data : data,
+			url : "http://localhost:8080/newUser", 
+			cache : false,
+			timeout : 15000,
+			error : function( data ) { transmitFailure( data ); },
+			success : function( data ) { transmitNewUserSuccess( data ); }
+		});
+
+		refresh( 300 );
+	}
+
+
+	/**
+	 *
+	 */
+	function transmitNewUserSuccess( response ) {
+
+		var result = eval( '(' + response + ')' ); 
+
+		if ( result.success ) {
+			loginSuccess( result.key );
+		}
+		else {
+			newUserFailure( result.error );
+		}
+	}
+
+
+	/**
+	 *
+	 */
+	function newUserFailure( error ) {
+
+		//-- reset the appropriate parts of the login box
+		$( '#loginMessage' ).html( error )
+	    $( '#jid' ).removeAttr("disabled"); 
+	    $( '#password' ).removeAttr("disabled"); 
+		$( '#password' ).val( "" );
+
+		window.localStorage.setItem( "logged_in", "FAILED" );
+		refresh( 300 );
+	}
+
+
+	/**
+	 *
+	 */
+	function transmitLoginSuccess( response ) {
+
+		var result = eval( '(' + response + ')' ); 
+		
+		if ( result.success ) {
+			loginSuccess( result.key );
+		}
+		else {
+			loginFailure( result.error );
+		}
+	}
+
+
+	/**
+	 *
+	 */
+	function transmitFailure( response ) {
+
+		//-- Error find the login endpoint
+		if ( response.status == 404 ) {
+			loginFailure( "API unreachable" );
+		}
+
+		//-- Error reaching the server
+		else if ( response.status == 0 ) {
+			loginFailure( "Server unreachable" );
+		}
+
+		//-- An unknown error has occurred
+		else {
+			loginFailure( "Unknown Error (" + response.status + ")" );
+		}
+	}
+
+
+	/**
+	 *
+	 */
+	function loginSuccess( key ) {
+		$( '#loginMessage' ).html( "" )
+	    $( '#jid' ).removeAttr("disabled"); 
+	    $( '#password' ).removeAttr("disabled"); 
+		$( '#password' ).val( "" );
+
+		window.localStorage.setItem( "logged_in", "SUCCESSFUL" );
+		window.localStorage.setItem( "key", key );
+		chrome.browserAction.setIcon({path:"icon.png"});
+		refresh( 300 );
+	}
+
+
+	/**
+	 *
+	 */
+	function loginFailure( error ) {
+
+		//-- reset the appropriate parts of the login box
+		$( '#loginMessage' ).html( error )
+	    $( '#jid' ).removeAttr("disabled"); 
+	    $( '#password' ).removeAttr("disabled"); 
+		$( '#password' ).val( "" );
+
+		window.localStorage.setItem( "logged_in", "FAILED" );
+		refresh( 300 );
+	}
+
+
+	/**
+	 *
+	 */
+	function clearLocalStorage() {
+		if ( confirm( 'Are you sure you want to clear Local Storage? This is not undoable...' ) ) {
+			window.localStorage.clear();
+			refresh( 300 );
+		}
+	}
+
+
+	/**
+	 *
+	 */
+	function clearCache() {
+		if ( confirm( 'Are you sure you want to clear the Error Cache? This is not undoable...' ) ){
+			window.localStorage.removeItem( "errorCache" );
+			refresh( 300 );
+		}
+	}
+
+
+</script>
+</head>
+
+<body onLoad="javascript:refresh()">
+<div>
+	<div style="float:left; margin-top:-5px;"> 
+		<img src="images/logo.png" style="border:0px; width:100px;"/>
+	</div>
+
+	<div id="loggedOutBox" class="displayBox">
+		<form action="">
+			<div class="left">Username:</div>
+			<div class="right" >
+				<input id="jid" class="text" name="jid" type="text" />
+			</div>
+			<div class="left">Password:</div>
+			<div class="right">
+				<input id="password" class="text" name="password" type="password" />
+			</div>
+			<div class="links">
+				<div id="loginMessage" class="loginMessage"></div>
+				<a id="loginLink" href="javascript:login()">login</a> &nbsp;
+				<a id="newUserLink" href="javascript:newUser()">new user</a><br/>
+			</div>
+		</form>
+	</div>
+
+	<div id="loggedInBox" class="displayBox">
+		<div style="margin-top:0px; text-align:right;">
+			<a href="javascript:logout()">logout</a>
+		</div>
+		<div style="font-family:Georgia; font-size:17px; margin-left: -2px; margin-top:-3px; color: #444444;">Username:</div>
+		<div id="username" style="font-family:Georgia; font-size:13px; color: #444444;"></div>
+
+	</div>
+
+	<div id="newUserBox" class="displayBox">
+		<a href="#">newUser</a>
+	</div>
+
+	<div class="currentPageDisplayBox" id="currentPageBox">
+		<div class="day">User Stats:</div>
+		<div id="pagesAnalysed" class="entry"></div>
+		<div id="pagesSent" class="entry"></div>
+		<div id="pagesComplete" class="entry"></div>
+		<div id="pagesCached" class="entry"></div>
+		<div class="entry"></div>
+
+		<div class="day">Last Page Distilled:</div>
+		<div id="pageTitle" class="entry"></div>
+		<div id="pageStats" class="entry"></div>
+		<div id="pageStatus" class="entry"></div>
+		<div class="entry"></div>
+
+		<div class="day">Extracted Terms:</div>
+		<div id="termlist" class="entry" style="font-family:arial; line-height:220%'"></div>
+		<div style="text-align:right; width:95%"> 
+			<a href="javascript:clearLocalStorage()">reset stats</a>
+		</div>
+	</div>
+</div>
+</body>
