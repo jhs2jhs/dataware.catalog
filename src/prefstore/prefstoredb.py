@@ -5,11 +5,12 @@ Created on 12 April 2011
 
 import MySQLdb
 import logging
-from time import time
 import sys
 import base64
 import hashlib
 import random
+from time import time
+import ConfigParser
 
 class prefstoredb( object ):
     ''' classdocs '''
@@ -20,7 +21,8 @@ class prefstoredb( object ):
     TBL_TERM_DICTIONARY = 'tblTermDictionary'
     TBL_TERM_BLACKLIST = 'tblTermBlacklist'
     TBL_USER_DETAILS = 'tblUserDetails'
-    
+    CONFIG_FILE = "prefstore.ini"
+    SECTION_NAME = "prefstoredb"
     
     #///////////////////////////////////////
     
@@ -82,19 +84,26 @@ class prefstoredb( object ):
         #than one connection. As such naming them is useful.
         self.name = name
         
+        Config = ConfigParser.ConfigParser()
+        Config.read( self.CONFIG_FILE )
+        self.hostname = Config.get( self.SECTION_NAME, "hostname" )
+        self.username =  Config.get( self.SECTION_NAME, "username" )
+        self.password =  Config.get( self.SECTION_NAME, "password" )
+        self.dbname = Config.get( self.SECTION_NAME, "dbname" )
 
+        
     #///////////////////////////////////////
     
         
     def connect( self ):
-
-        logging.info( "%s: connecting to mysql database..." % self.name );
-                 
+        
+        logging.info( "%s: connecting to mysql database..." % self.name )
+        
         self.conn = MySQLdb.connect( 
-            host = "localhost",
-            user = "prefstore",
-            passwd = "cr1t1c4l",
-            db = "prefstore"
+            self.hostname,
+            self.username,
+            self.password,
+            self.dbname
         )
             
         self.cursor = self.conn.cursor( MySQLdb.cursors.DictCursor )
