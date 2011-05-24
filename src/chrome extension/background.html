@@ -8,18 +8,15 @@
 	/** 
 	 * This is the Controller Script for the Google Chrome Datware.
 	 * It receives requests from the content and popup scripts.
-     
+
+   	 * TODO: Should keep track of web-history, to check that a web page is not being repeatedly read (also solves back button problem)
+	 * TODO: Currently the "back button" will still refresh the page!?
 	 * TODO: Keep track of IP Address
-	 * TODO: Make the icon default to "logged out" when turned on.
-	 * TODO: Implement "new user"
 	 * TODO: "Key" currently isn't doing anything
 	 * TODO: Linguistic Processing (i.e. write the query!)
-	 * TODO: Add bulk inserts + remove print statements.
-	 * TODO: Currently the "back button" will still refresh the page!?
-	 * TODO: There is a threading error - mysql cannot update pages as well as doing the web counts!?
-	 * TODO: Stress Test
+	 * TODO: Add bulk inserts 
+
 	 * TODO: Create logs 
-	 *	- processing log (i.e. "Completed Distallation")
 	 *  - logins (including ip addresses)
 	 *  - logouts
 	 *  - errors!
@@ -40,6 +37,11 @@
 			processVector( request.text, sender.tab.url, sender.tab.title );
 		}
 	);
+
+	//-- Make sure the correct favicon is displayed
+	logged_in = window.localStorage.getItem( "logged_in" );
+	if ( logged_in != "SUCCESSFUL" ) 
+		chrome.browserAction.setIcon( { path:"icon-dormant.png" } );
 
 
     /**
@@ -163,7 +165,7 @@
 	function processFailure( distillation, cause ) {
 
 		//-- update the favicon information to reflect the failure
-		chrome.browserAction.setIcon({path:"icon-failure.png"});
+		chrome.browserAction.setIcon( { path:"icon-failure.png" } );
 		chrome.browserAction.setBadgeText({text:""});
 		
 		//-- specify that the "last page" failed
