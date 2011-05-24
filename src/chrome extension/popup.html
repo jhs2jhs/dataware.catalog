@@ -98,6 +98,7 @@ form input.text {
 <script type="text/javascript" src="jquery-1.6.min.js"></script>
 <script>
 
+
 	/** 
 	 * Model for the info page
 	 */
@@ -110,6 +111,7 @@ form input.text {
 	jid = window.localStorage.getItem( "jid" );
 	key = window.localStorage.getItem( "logged_in" );
 	new_user = window.localStorage.getItem( "new_user" );
+
 
 	/**
 	 * Main function for the page. Also used for a 'refresh'
@@ -137,7 +139,7 @@ form input.text {
 			displayBox( "loggedInBox", duration );
 		}
 		else {
-			chrome.browserAction.setIcon({path:"icon-dormant.png"});
+			chrome.browserAction.setIcon( { path:"icon-dormant.png" } );
 			displayBox( "loggedOutBox", duration );
 		}
 
@@ -224,38 +226,48 @@ form input.text {
 	 *
 	 */
 	function login() {
-
+		
 		window.localStorage.setItem( "jid", $( '#jid' ).val()  );
 		window.localStorage.setItem( "logged_in", "PENDING" );
+
 		this.jid = $( '#jid' ).val() 
+		password =	$( '#password' ).val()
 
+		if( hasIllegalCharacters( this.jid ) || 
+			hasIllegalCharacters( password ) 
+		) {
+			loginFailure( "illegal characters" )
+		}
+		else 
+		{
+			//-- disable everything while we try and login
+			$( '#jid' ).attr( "disabled", true ); 
+			$( '#password' ).attr( "disabled", true ); 
 
-		//-- disable everything while we try and login
-		$( '#jid' ).attr( "disabled", true ); 
-		$( '#password' ).attr( "disabled", true ); 
-
-		data = "data={\"user\":\"" + this.jid + "\",\"pass\":\"" + $( '#password' ).val() + "\"}";
-		
-		//-- attempt to send the distill to the prefstore
-		jQuery.ajax({ 
-			type : "POST", 
-			data : data,
-			url : "http://localhost:8080/login", 
-			cache : false,
-			timeout : 15000,
-			error : function( data ) { transmitFailure( data ); },
-			success : function( data ) { transmitLoginSuccess( data ); }
-		});
+			data = "data={\"user\":\"" + this.jid + "\",\"pass\":\"" + password + "\"}";
+			
+			//-- attempt to send the distill to the prefstore
+			jQuery.ajax({ 
+				type : "POST", 
+				data : data,
+				url : "http://localhost:8080/login", 
+				cache : false,
+				timeout : 15000,
+				error : function( data ) { transmitFailure( data ); },
+				success : function( data ) { transmitLoginSuccess( data ); }
+			});
+		}
 
 		refresh( 300 );
 	}
 
 	
 	/**
-	 * function to clean term before transmission
-	 * this would remove SQL injection, check length and 
+	 * check that the term supplied doesn't have any illegal 
+	 * characters in it...
 	 */
-	 function cleanTerm() {
+	 function hasIllegalCharacters( term ) {
+		return !( term == term.replace( /["'<>//\&$,:;?(){}]/g, ' ') )
 	 }
 
 
@@ -372,7 +384,7 @@ form input.text {
 
 		window.localStorage.setItem( "logged_in", "SUCCESSFUL" );
 		window.localStorage.setItem( "key", key );
-		chrome.browserAction.setIcon({path:"icon.png"});
+		chrome.browserAction.setIcon( { path:"icon.png" } );
 		refresh( 300 );
 	}
 
