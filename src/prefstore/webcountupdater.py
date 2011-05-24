@@ -25,7 +25,7 @@ class webcountupdater( threading.Thread ):
     '''
     
     #the length of time seconds between updating web term counts
-    INTERVAL_DURATION = 60
+    INTERVAL_DURATION = 60 * 10
         
         
     #///////////////////////////////////////////////
@@ -41,7 +41,6 @@ class webcountupdater( threading.Thread ):
  
  
     def fetchCounts( self, terms ): 
-        
         
         termsUpdated = 0;
         termsBlacklisted = 0;
@@ -91,7 +90,8 @@ class webcountupdater( threading.Thread ):
             missingCountList = self.database.getMissingCounts();
             
             logging.info( 
-                "Web Count Update: %d terms require counts" % len( missingCountList )  
+                "Web Count Update: %d terms require counts" 
+                % len( missingCountList )  
             )
             
             if len( missingCountList ) > 0:
@@ -100,8 +100,8 @@ class webcountupdater( threading.Thread ):
             self.nextUpdate = time.time() + self.INTERVAL_DURATION
              
             logging.info( 
-                "Web Count Update: next update at %s " % 
-                datetime.datetime.fromtimestamp( self.nextUpdate )
+                "Web Count Update: next update at %s " 
+                % datetime.datetime.fromtimestamp( self.nextUpdate )
             )
 
             self.database.close()
