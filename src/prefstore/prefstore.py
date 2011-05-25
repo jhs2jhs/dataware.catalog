@@ -61,7 +61,7 @@ def main():
         format= '%(asctime)s [%(levelname)s] %(message)s', 
         datefmt='%Y-%m-%d %I:%M:%S',
         filename='logs/prefstore.log',
-        level=logging.DEBUG 
+        level=logging.INFO 
     )
     
     try:
@@ -94,6 +94,13 @@ def main():
         
     db.close();    
 
+#///////////////////////////////////////////////
+
+
+@route( '/ping')
+def ping():
+    return "pong"
+    
 
 #///////////////////////////////////////////////
 
@@ -241,14 +248,18 @@ def submitDistill():
             "%s: JSON validation error - %s" 
             % ( "prefstore", e ) 
         )          
+        return "{'success':false,'cause':'JSON error'}"
 
-    except:
+    except MySQLdb.Error, e:
         logging.error( 
-            "%s: Uncaught error %s" 
-            % ( "prefstore", sys.exc_info()[0] ) 
+            "%s: Database error %s" 
+            % ( "prefstore", e ) 
         )
+        return "{'success':false,'cause':'Database error'}"
     
-    return "{'success':false,'cause':'JSON error'}"
+    return "{'success':false,'cause':'Unknown error'}"
+    
+    
 
     
 #///////////////////////////////////////////////        
