@@ -9,28 +9,26 @@
 	 * This is the Controller Script for the Google Chrome Datware.
 	 * It receives requests from the content and popup scripts.
 
-   	 * TODO: Should keep track of web-history, to check that a web page is not being repeatedly read (also solves back button problem)
-	 * TODO: Currently the "back button" will still refresh the page!?
-	 * TODO: Keep track of IP Address
+	 * TODO: Get the stuff sending to the AMI server and not localhost
 	 * TODO: "Key" currently isn't doing anything
+   	 * TODO: Should keep track of web-history, to check that a web page is not being repeatedly read (also solves back button problem)
+ 	 * TODO: We should probably ignore search results? Lots of ambiguous stuff there? Maybe take search terms instead?
+	 * TODO: Keep track of IP Address
 	 * TODO: Linguistic Processing (i.e. write the query!)
 	 * TODO: Add bulk inserts 
 
-	 * TODO: Create logs 
-	 *  - logins (including ip addresses)
-	 *  - logouts
-	 *  - errors!
-	 * TODO: Get the stuff sending to the AMI server and not localhost
 	 * TODO: Implement a resend on the caching system
 	 * TODO: Improve the popup.html so that the info for the current page is visible
-	 * TODO: We should probably ignore search results? Lots of ambiguous stuff there? Maybe take search terms instead?
+
 	 */
 
 	//-- Constants for this implementation.
 	DOCUMENT_TYPE = "web";
 	APPLICATION_NAME = "Google Chrome";
-	PREFSTORE = "http://myprefstore.com/"
-
+	PREFSTORE = "http://ec2-79-125-74-77.eu-west-1.compute.amazonaws.com:8080/";
+	//"http://localhost:8080/";
+	
+	
 	//-- Listener to receive word vectors from the content script.
 	chrome.extension.onRequest.addListener(
 		function( request, sender, sendResponse ) {
@@ -74,7 +72,7 @@
 
 			//-- transmit to the prefstore
 			//-- TODO: only send it at a certain time, when cache is full, etc.
-			chrome.browserAction.setIcon({path:"icon-progress.png"});
+			chrome.browserAction.setIcon( { path:"icon-progress.png" } );
 			transmitDistillation( distillation );
 			incrementUserStat( "pagesSent" );
 		}	
@@ -90,7 +88,7 @@
 		jQuery.ajax({ 
 			type : "POST", 
 			data : "data=" + distillation.stringify(),
-			url : "http://localhost:8080/submitDistill", 
+			url : PREFSTORE + "submitDistill", 
 			cache : false,
 			timeout : 30000,
 			error : function( data ) { transmitFailure( distillation, data ); },
@@ -146,8 +144,8 @@
 	function processSuccess( distillation ) {
 
 		//-- TODO: change the logo to a tick for this page.
-		chrome.browserAction.setIcon({path:"icon-success.png"});
-		chrome.browserAction.setBadgeText({text:""});
+		chrome.browserAction.setIcon( { path:"icon-success.png" } );
+		chrome.browserAction.setBadgeText( { text:"" } );
 
 		//-- update user statistics
 		incrementUserStat( "pagesComplete" );

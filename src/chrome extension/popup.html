@@ -112,6 +112,8 @@ form input.text {
 	key = window.localStorage.getItem( "logged_in" );
 	new_user = window.localStorage.getItem( "new_user" );
 
+	PREFSTORE = "http://ec2-79-125-74-77.eu-west-1.compute.amazonaws.com:8080/";
+	//"http://localhost:8080/";
 
 	/**
 	 * Main function for the page. Also used for a 'refresh'
@@ -233,10 +235,20 @@ form input.text {
 		this.jid = $( '#jid' ).val() 
 		password =	$( '#password' ).val()
 
-		if( hasIllegalCharacters( this.jid ) || 
-			hasIllegalCharacters( password ) 
-		) {
+		if( hasIllegalCharacters( this.jid ) || hasIllegalCharacters( password ) ) {
 			loginFailure( "illegal characters" )
+		}
+		else if( this.jid.length == 0 ) {
+			loginFailure( "username missing" ) 
+		}
+		else if( this.jid.length > 128 ) {
+			loginFailure( "username too long" )
+		}
+		else if( password.length == 0 ) {
+			loginFailure( "password missing" )
+		}
+		else if( password.length > 128  ) {
+			loginFailure( "password too long" )
 		}
 		else 
 		{
@@ -250,7 +262,7 @@ form input.text {
 			jQuery.ajax({ 
 				type : "POST", 
 				data : data,
-				url : "http://localhost:8080/login", 
+				url : PREFSTORE + "login", 
 				cache : false,
 				timeout : 15000,
 				error : function( data ) { transmitFailure( data ); },
@@ -292,7 +304,7 @@ form input.text {
 		jQuery.ajax({ 
 			type : "POST", 
 			data : data,
-			url : "http://localhost:8080/newUser", 
+			url : PREFSTORE + "newUser", 
 			cache : false,
 			timeout : 15000,
 			error : function( data ) { transmitFailure( data ); },
@@ -355,6 +367,8 @@ form input.text {
 	 *
 	 */
 	function transmitFailure( response ) {
+
+		console.log( response );
 
 		//-- Error find the login endpoint
 		if ( response.status == 404 ) {
