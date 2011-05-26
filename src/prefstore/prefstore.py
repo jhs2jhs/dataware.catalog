@@ -61,7 +61,7 @@ def main():
         format= '%(asctime)s [%(levelname)s] %(message)s', 
         datefmt='%Y-%m-%d %I:%M:%S',
         filename='logs/prefstore.log',
-        level=logging.INFO 
+        level=logging.DEBUG 
     )
     
     try:
@@ -94,6 +94,25 @@ def main():
         
     db.close();    
 
+
+#///////////////////////////////////////////////
+
+
+def safetyCall( func ):
+    """
+        This is a function that protects from mysqldb timeout,
+        performing one reconnection attempt if the provided lambda 
+        function generates a mysqldb error. This is necessary because
+        mysqldb does not currently provided an auto_reconnect facility.
+    """
+    try:
+        return func();
+    except MySQLdb.Error, e:
+        logging.error( "%s: db error %s" % ( "prefstore", e.args[ 0 ] ) )
+        db.reconnect()
+        return func();
+    
+    
 #///////////////////////////////////////////////
 
 
@@ -114,7 +133,14 @@ def login():
         password = data.get( 'pass' )
 
         try:
-            key = db.checkLogin( user, password )
+            # First db interaction of this method so safety check in case 
+            # a mysql timeout has occurred since we last accessed the db.
+            key = safetyCall( lambda: 
+                db.checkLogin( user, password ) 
+            )
+            
+            #commit occurs because a new key is generated when Login is checked.
+            db.commit()
             
             if ( key  ):
 
@@ -146,7 +172,7 @@ def login():
 @route( '/newUser', method = "POST")
 def newUser():
     
-    #load in the necessary data to create the new user
+    #load in the necessary data to create the new user.
     try:
         data = json.loads( request.forms.get( 'data' ) )
         user = data.get( 'user' )
@@ -159,10 +185,17 @@ def newUser():
         return "{'success':false, 'error':'JSON error'}"
     
     #determine the acceptability of a supplied username
+    #should it be a valid datasphere (i.e. xmpp) address?
     
     #insert the user into the database and respond successfully
     try:
-        if not db.insertUser( user, password ):
+        # First db interaction of this method so safety check in case 
+        # a mysql timeout has occurred since we last accessed the db
+        userInserted = safetyCall( lambda: 
+            db.insertUser( user, password ) 
+        )
+        
+        if not userInserted:
             return "{'success':false,'error':'incomplete details'}"
         
         key = db.createNewUserKey( user )
@@ -190,7 +223,7 @@ def newUser():
     
     return "{'success':false, 'error':'unknown error'}"    
             
-        
+
 #///////////////////////////////////////////////
 
 
@@ -202,23 +235,29 @@ def submitDistill():
     """
 
     try:
-        # First turn the json packet into a dictionary
+        # First turn the json packet into a dictionary.
         data = json.loads( request.forms.get( 'data' ) )
         
-        # Make sure the message is in the correct distill format
+        # Make sure the message is in the correct distill format.
         validictory.validate( data, schema )
 
         user = data.get( 'user' )
         key = data.get( 'key' )
         
-        # Log that we have received the distill message
+        # Log that we have received the distill message.
         logging.info( 
             "%s: Message from '%s' successfully unpacked" 
             % ( "prefstore", user ) 
         )
         
+        # First db interaction of this method so safety check in case 
+        # a mysql timeout has occurred since we last accessed the db.
+        authenticated = safetyCall( lambda: 
+            db.authenticate( user, key )
+        )
+        
         # Authenticate the user, using the supplied key
-        if db.authenticate( user, key ):
+        if authenticated:
             
             logging.debug( 
                 "%s: Message from '%s' successfully authenticated" 
@@ -255,6 +294,9 @@ def submitDistill():
             "%s: Database error %s" 
             % ( "prefstore", e ) 
         )
+        
+        
+        print "Error %d: %s" % (e.args[0], e.args[1])
         return "{'success':false,'cause':'Database error'}"
     
     return "{'success':false,'cause':'Unknown error'}"
@@ -272,7 +314,7 @@ def processDistill( data ) :
     mtime = data.get( 'mtime' )
     fv = data.get( 'fv' )
     
-    #Update user info, incrementing the number of documents we have received
+    #Update user info, incrementing the number of documents we have received.
     userUpdated = db.incrementUserInfo( user, mtime )
     
     if not userUpdated :

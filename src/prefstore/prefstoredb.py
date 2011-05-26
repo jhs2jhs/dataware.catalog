@@ -100,10 +100,10 @@ class prefstoredb( object ):
         logging.info( "%s: connecting to mysql database..." % self.name )
         
         self.conn = MySQLdb.connect( 
-            self.hostname,
-            self.username,
-            self.password,
-            self.dbname
+            host=self.hostname,
+            user=self.username,
+            passwd=self.password,
+            db=self.dbname
         )
             
         self.cursor = self.conn.cursor( MySQLdb.cursors.DictCursor )
@@ -113,7 +113,7 @@ class prefstoredb( object ):
     
     
     def reconnect( self ):
-        logging.info( "%s: reconnecting to mysql database..." % self.name );
+        logging.info( "%s: Database reconnection process activated:" % self.name );
         self.close()
         self.connect()
         
@@ -180,7 +180,7 @@ class prefstoredb( object ):
         if not self.TBL_TERM_APPEARANCES in tables : 
             self.createTable( self.TBL_TERM_APPEARANCES )
      
-        self.conn.commit();
+        self.commit();
         
         
     #///////////////////////////////////////
@@ -284,7 +284,6 @@ class prefstoredb( object ):
             
             if ( password == row.get( "password" ) ):
                 key = self.createNewUserKey( user )
-                self.commit()
                 return key 
             else:    
                 return None
