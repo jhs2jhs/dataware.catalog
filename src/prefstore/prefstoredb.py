@@ -397,66 +397,38 @@ class prefstoredb( object ):
     #///////////////////////////////////////
               
                 
-    def insertTermAppearance( self, user = None, term = None, freq = 0 ):
+    def updateTermAppearance( self, user = None, term = None, freq = 0 ):
         
         try:
             if term and user:
                 
                 logging.debug( 
-                    "%s %s: Adding term '%s' for user '%s': +%d appearances" 
-                    % ( self.name, "insertTermAppearance", term, user, freq ) 
+                    "%s %s: Updating term '%s' for user '%s': +%d appearances" 
+                    % ( self.name, "updateTermAppearance", term, user, freq ) 
                 );
                 
                 query = """
                     INSERT INTO %s.%s ( user, term, docAppearances, totalAppearances ) 
                     VALUES ( %s, %s, %s, %s )
-                """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES, '%s', '%s', '%s', '%s' ) 
-                self.cursor.execute( query, ( user, term, 1, freq ) )
+                    ON DUPLICATE KEY UPDATE 
+                    docAppearances = docAppearances + 1, 
+                    totalAppearances = totalAppearances + %s
+                """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES, '%s', '%s', '%s', '%s', '%s' )
+
+                self.cursor.execute( query, ( user, term, 1, freq, freq ) )
                 
             else:
                 logging.warning( 
-                    "%s %s: Adding term '%s' for user '%s': ignoring..." 
-                    % ( self.name, "insertTermAppearance" , term, user, freq ) 
+                    "%s %s: Updating term '%s' for user '%s': ignoring..." 
+                    % ( self.name, "updateTermAppearance" , term, user, freq ) 
                 );
             
         except:
             logging.error(
                 "%s %s: error %s" 
-                % ( self.name, "insertTermAppearance" , sys.exc_info()[0] ) 
+                % ( self.name, "updateTermAppearance" , sys.exc_info()[0] ) 
             )
 
-        
-    #///////////////////////////////////////
-              
-                
-    def incrementTermAppearance( self, user = None, term = None, freq = 0 ):
-        
-        if term and user:
-            termAppearance = self.getTermAppearance( user, term )
-            
-            if not termAppearance :
-                self.insertUserTerm( user, term, freq )
-            else:
-                
-                logging.debug( 
-                    "%s %s: Updating '%s' for '%s': +%d appearances" 
-                    % ( self.name, "incrementTermAppearance", term, user, freq ) 
-                );
-                
-                query = """
-                    UPDATE %s.%s 
-                    SET docAppearances = docAppearances + 1, 
-                        totalAppearances = totalAppearances + %s
-                    WHERE user = %s
-                    AND term = %s
-                """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES, '%s', '%s', '%s' ) 
-                self.cursor.execute( query, ( freq, user, term ) )
-        else:
-            logging.warning( 
-                "%s %s: Adding term '%s' for user '%s': ignoring..." % 
-                ( self.name, "incrementTermAppearance", term, user, freq ) 
-            );
-            
         
     #///////////////////////////////////////             
               

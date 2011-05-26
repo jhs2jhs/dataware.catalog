@@ -326,26 +326,24 @@ def processDistill( data ) :
 
     #Split the terms into ones that exist in the db, and ones that don't
     terms = db.removeBlackListed( [ term for term in fv ] )
-    existingTerms = db.matchExistingTerms( terms )
-    newTerms = [ term for term in terms if term not in existingTerms ]
+    existingDictTerms = db.matchExistingTerms( terms )
+    newTerms = [ term for term in terms if term not in existingDictTerms ]
     processedTerms = 0
 
     #Process the terms we haven't seen before
     for term in newTerms:
         try:
             db.insertDictionaryTerm( term )
-            db.insertTermAppearance( user, term, fv.get( term ) )
-            processedTerms += 1
         except:
             logging.warning( 
-                "%s: Failed to add term '%s' for '%s'" 
+                "%s: Failed to add term '%s' to dictionary"
                 % ( "prefstore", term, user ) 
             )
 
     #Process the terms that already exist in the dictinoary            
-    for term in existingTerms:
+    for term in terms:
         try:
-            db.incrementTermAppearance( user, term, fv.get( term ) );    
+            db.updateTermAppearance( user, term, fv.get( term ) );    
             processedTerms += 1
         except:
             logging.warning( 
@@ -359,7 +357,7 @@ def processDistill( data ) :
     #Log the distillation results
     logging.info( 
         "%s: Message from '%s' (%d terms, %d extant, %d new, %d processed)" 
-        % ( "prefstore", user, len( terms ), len( existingTerms ), len( newTerms ), processedTerms ) 
+        % ( "prefstore", user, len( terms ), len( existingDictTerms ), len( newTerms ), processedTerms ) 
     )
     
     #And return from the function successfully
