@@ -112,8 +112,8 @@ form input.text {
 	key = window.localStorage.getItem( "logged_in" );
 	new_user = window.localStorage.getItem( "new_user" );
 
-	PREFSTORE = "http://ec2-79-125-74-77.eu-west-1.compute.amazonaws.com:8080/";
-	//"http://localhost:8080/";
+	PREFSTORE = //"http://ec2-79-125-74-77.eu-west-1.compute.amazonaws.com:8080/";
+	"http://localhost:8080/";
 
 	/**
 	 * Main function for the page. Also used for a 'refresh'
@@ -291,26 +291,45 @@ form input.text {
 
 		window.localStorage.setItem( "jid", $( '#jid' ).val()  );
 		window.localStorage.setItem( "logged_in", "PENDING" );
-		this.jid = $( '#jid' ).val() 
-
+		this.jid = $( '#jid' ).val();
+		password = $( '#password' ).val();
 
 		//-- disable everything while we try and login
 		$( '#jid' ).attr( "disabled", true ); 
 		$( '#password' ).attr( "disabled", true ); 
 
-		data = "data={\"user\":\"" + this.jid + "\",\"pass\":\"" + $( '#password' ).val() + "\"}";
-		
-		//-- attempt to send the distill to the prefstore
-		jQuery.ajax({ 
-			type : "POST", 
-			data : data,
-			url : PREFSTORE + "newUser", 
-			cache : false,
-			timeout : 15000,
-			error : function( data ) { transmitFailure( data ); },
-			success : function( data ) { transmitNewUserSuccess( data ); }
-		});
 
+		if( hasIllegalCharacters( this.jid ) || hasIllegalCharacters( password ) ) {
+			loginFailure( "illegal characters" )
+		}
+		else if( this.jid.length == 0 ) {
+			loginFailure( "username missing" ) 
+		}
+		else if( this.jid.length > 128 ) {
+			loginFailure( "username too long" )
+		}
+		else if( password.length == 0 ) {
+			loginFailure( "password missing" )
+		}
+		else if( password.length > 128  ) {
+			loginFailure( "password too long" )
+		}
+		else 
+		{
+			data = "data={\"user\":\"" + this.jid + "\",\"pass\":\"" + password + "\"}";
+		
+			//-- attempt to send the distill to the prefstore
+			jQuery.ajax({ 
+				type : "POST", 
+				data : data,
+				url : PREFSTORE + "newUser", 
+				cache : false,
+				timeout : 15000,
+				error : function( data ) { transmitFailure( data ); },
+				success : function( data ) { transmitNewUserSuccess( data ); }
+			});
+		}
+		
 		refresh( 300 );
 	}
 
