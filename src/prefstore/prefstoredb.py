@@ -90,7 +90,7 @@ class prefstoredb( object ):
         self.username =  Config.get( self.SECTION_NAME, "username" )
         self.password =  Config.get( self.SECTION_NAME, "password" )
         self.dbname = Config.get( self.SECTION_NAME, "dbname" )
-
+        self.connected = False;
         
     #///////////////////////////////////////
     
@@ -98,16 +98,16 @@ class prefstoredb( object ):
     def connect( self ):
         
         logging.info( "%s: connecting to mysql database..." % self.name )
-        
+
         self.conn = MySQLdb.connect( 
             host=self.hostname,
             user=self.username,
             passwd=self.password,
             db=self.dbname
         )
-            
+ 
         self.cursor = self.conn.cursor( MySQLdb.cursors.DictCursor )
-        
+        self.connected = True
                     
     #///////////////////////////////////////
     
@@ -129,6 +129,7 @@ class prefstoredb( object ):
         
           
     def close( self ) :
+        
         logging.info( "%s: disconnecting from mysql database..." % self.name );
         self.cursor.close();
         self.conn.close()

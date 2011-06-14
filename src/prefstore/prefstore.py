@@ -59,14 +59,14 @@ def main():
     logging.basicConfig( 
         format= '%(asctime)s [%(levelname)s] %(message)s', 
         datefmt='%Y-%m-%d %I:%M:%S',
-        filename='logs/prefstore.log',
+        #filename='logs/prefstore.log',
         level=logging.DEBUG 
     )
     
     try:
         global db;    
         db = prefstoredb()  
-        db.connect()  
+        db.connect()
         db.checkTables()
 
         updater = webcountupdater()
@@ -85,14 +85,19 @@ def main():
             % ( "prefstore", e.args[0], e.args[1] ) 
         )
         
+    except MySQLdb.Error, e:
+        logging.error( 
+            "%s: Database Error %d: %s" 
+            % ( "prefstore", e.args[0], e.args[1] ) 
+        )
     except:
         logging.error( 
             "%s: Uncaught error %s" 
             % ( "prefstore", sys.exc_info()[0] ) 
         )      
-        
-    db.close();    
 
+    if db.connected: 
+        db.close();
 
 #///////////////////////////////////////////////
 
