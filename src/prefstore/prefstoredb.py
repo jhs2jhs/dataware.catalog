@@ -21,7 +21,7 @@ class prefstoredb( object ):
     TBL_TERM_DICTIONARY = 'tblTermDictionary'
     TBL_TERM_BLACKLIST = 'tblTermBlacklist'
     TBL_USER_DETAILS = 'tblUserDetails'
-    CONFIG_FILE = "prefstore.ini"
+    CONFIG_FILE = "prefstore.cfg"
     SECTION_NAME = "prefstoredb"
     
     #///////////////////////////////////////
