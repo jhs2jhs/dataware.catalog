@@ -54,7 +54,6 @@ schema = {
     
 #///////////////////////////////////////////////
 
-
 def main(): 
                    
     logging.basicConfig( 
