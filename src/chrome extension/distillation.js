@@ -4,15 +4,13 @@
  */
 function Distillation( fv, url, duration, docName, totalWords ) {
 
-	this.user = window.localStorage.getItem( "jid" );
-	this.key = window.localStorage.getItem( "key" );
 	this.fv = fv;
 	this.docId = escape( url );
 	this.duration = duration;
-	this.docType = DOCUMENT_TYPE;
-	this.appName = APPLICATION_NAME;
+	this.docType = escape( DOCUMENT_TYPE );
+	this.appName = escape( APPLICATION_NAME );
 	this.mtime = Math.round ( new Date().getTime() / 1000 );
-	this.docName = docName;
+	this.docName = escape( docName );
 	this.totalWords = totalWords;
 }
 
@@ -24,8 +22,6 @@ function Distillation( fv, url, duration, docName, totalWords ) {
  */
 Distillation.prototype.stringify = function() {
 	return "{" + 
-		"\"user\":\"" + this.user + "\"," +
-		"\"key\":\"" + this.key + "\"," +
 		"\"docId\":\"" + this.docId + "\"," +
 		"\"docName\":\"" + this.docName + "\"," +
 		"\"docType\":\"" + this.docType + "\"," +

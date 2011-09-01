@@ -5,10 +5,14 @@ Created on 8 May 2011
 '''
 
 import threading
+import logging
 import time
-from websearch import * #@UnusedWildImport
+import sys
 import datetime
-from prefstore import prefstoredb
+
+import PrefstoreDB
+from WebSearch import * #@UnusedWildImport
+
 
 #///////////////////////////////////////////////
 
@@ -19,7 +23,7 @@ BING_KEY = "580DDBFFD1A4581F90038B9D5B80BA065FEFE4E7"
 #///////////////////////////////////////////////
 
 
-class webcountupdater( threading.Thread ):
+class WebCountUpdater( threading.Thread ):
     '''
     classdocs
     '''
@@ -32,8 +36,8 @@ class webcountupdater( threading.Thread ):
         
         
     def __init__( self ):
-        self.search = websearch( proxy=WEB_PROXY, bing_key=BING_KEY )
-        self.database = prefstoredb( "webdb" );    
+        self.search = WebSearch( proxy=WEB_PROXY, bing_key=BING_KEY )
+        self.database = PrefstoreDB.PrefstoreDB( "webdb" );    
         threading.Thread.__init__( self )
  
  

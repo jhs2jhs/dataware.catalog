@@ -6,7 +6,7 @@ Created on 18 Apr 2011
 
 import urllib, json, logging, sys
 
-class websearch( object ):
+class WebSearch( object ):
     ''' classdocs '''
     
     _PROXY = None 

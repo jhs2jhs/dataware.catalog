@@ -4,28 +4,30 @@
 	<script type="text/javascript" src="distillation.js"></script>
 	<script type="text/javascript" src="parser.js"></script>
 	<script>
-	
+
 	/** 
 	 * This is the Controller Script for the Google Chrome Datware.
 	 * It receives requests from the content and popup scripts.
-
-	 * TODO: Get the stuff sending to the AMI server and not localhost
-   	 * TODO: Should keep track of web-history, to check that a web page is not being repeatedly read (also solves back button problem)
+	 * TODO: Should keep track of web-history, to check that a web page is not being repeatedly read (also solves back button problem)
  	 * TODO: We should probably ignore search results? Lots of ambiguous stuff there? Maybe take search terms instead?
 	 * TODO: Keep track of IP Address
-	 * TODO: Linguistic Processing (i.e. write the query!)
 	 * TODO: Add bulk inserts 
-
-	 * TODO: Implement a resend on the caching system
 	 * TODO: Improve the popup.html so that the info for the current page is visible
-
 	 */
 
-	//-- Constants for this implementation.
+	//-- Setup constants that will be required
 	DOCUMENT_TYPE = "web";
 	APPLICATION_NAME = "Google Chrome";
-	PREFSTORE = "http://ec2-79-125-74-77.eu-west-1.compute.amazonaws.com:8080/";
-	//"http://localhost:8080/";
+	COOKIE_NAME = "logged_in"
+	PREFSTORE =  "http://localhost:8080/";
+	
+	window.localStorage.setItem( "cookie_name", COOKIE_NAME );
+	window.localStorage.setItem( "prefstore", PREFSTORE );
+	//"http://ec2-79-125-74-77.eu-west-1.compute.amazonaws.com:8080/";
+	
+	
+	//-- initialize by parsing the extensions corresponding cookie	
+	parse_cookie()
 	
 	
 	//-- Listener to receive word vectors from the content script.
@@ -34,13 +36,62 @@
 			processVector( request.text, sender.tab.url, sender.tab.title );
 		}
 	);
+	
+			
+	//-- setup a listener so that if cookies change we refresh the page
+	chrome.cookies.onChanged.addListener( 
+		function( info ) { parse_cookie() }
+	);
+	
+	
+	//-- determine whether the user is logged in
+	function parse_cookie() {
+		a = chrome.cookies.get(
+			{ "url" : PREFSTORE, "name" : COOKIE_NAME },
+			function( cookie ) {
+			
+				window.localStorage.removeItem( "user_id" );
+				window.localStorage.removeItem( "screen_name" );
+				
+				if ( cookie ) {
+					jsonString = eval( cookie.value )
+					data = eval( '(' + jsonString + ')' )
+					
+					if ( data.user_id ) {
+						window.localStorage.setItem( "user_id", data.user_id );
+					}
+					
+					if ( data.screen_name ) {
+						window.localStorage.setItem( "screen_name", data.screen_name );
+					}
+				}
 
-	//-- Make sure the correct favicon is displayed
-	logged_in = window.localStorage.getItem( "logged_in" );
-	if ( logged_in != "SUCCESSFUL" ) 
-		chrome.browserAction.setIcon( { path:"icon-dormant.png" } );
+				user_id = window.localStorage.getItem( "user_id" );
+				screen_name = window.localStorage.getItem( "screen_name" );
+				
+				refresh();
+			}
+		);
+	}
 
 
+	//-- the init function (called refresh as it is called every time
+	//-- something changes - namely cookie updates.
+	function refresh() {
+		
+		//--retrieve and fill the global variables
+		user_id = window.localStorage.getItem( "user_id" );
+		screen_name = window.localStorage.getItem( "screen_name" );
+		
+		//-- Make sure the correct favicon is displayed
+		if ( user_id && screen_name ) {
+			chrome.browserAction.setIcon( { path:"icon.png" } );
+		} else {
+			chrome.browserAction.setIcon( { path:"icon-dormant.png" } );
+		}
+	}
+	
+	
     /**
      * Main entry point to the script - contentScript.js essentially 
 	 * bundles up the text from a web page ready for parsing, and 
@@ -48,30 +99,30 @@
 	 */
 	function processVector( text, url, title ) {
 	
-		//-- Load up user data.
-		logged_in = window.localStorage.getItem( "logged_in" );
-		jid = window.localStorage.getItem( "jid" );
-		key = window.localStorage.getItem( "key" );
+		//--retrieve and fill the global variables
+		var user_id = window.localStorage.getItem( "user_id" );
+		var screen_name = window.localStorage.getItem( "screen_name" );
 		
 		//-- if the user is logged in (and we have their details, then we 
-		//-- can organize sending the date to their prefstore. Otherwise
-		//-- for the moment lets just ignore it.
-		if ( logged_in == "SUCCESSFUL" && jid && key ) {
-
+		//-- can organize sending the data to their prefstore. Otherwise
+		//-- for the moment we discard it
+		
+		if ( user_id && screen_name )  {
+		
 			//-- parse the text with min_word_length 3, min_support 3
 			doc = new Parser( text, 3, 3 );
-
+			
 			//-- create the distillation object (default duration to 10s for now)
 			var distillation = new Distillation( doc.fv, url, 10, title, doc.totalWords );
-
+			
 			//-- store the current page being observed, for the stats dropdown.
 			window.localStorage.setItem( "lastPage", distillation.stringify() );
 			window.localStorage.setItem( "lastPageStatus", null );
 			incrementUserStat( "pagesAnalysed" );
-
+			
 			//-- transmit to the prefstore
-			//-- TODO: only send it at a certain time, when cache is full, etc.
 			chrome.browserAction.setIcon( { path:"icon-progress.png" } );
+			
 			transmitDistillation( distillation );
 			incrementUserStat( "pagesSent" );
 		}	
@@ -83,10 +134,13 @@
 	 */
 	function transmitDistillation( distillation ) {
 
+		user_id = window.localStorage.getItem( "user_id" );
+		data = "user_id=" + user_id + "&data=" + distillation.stringify();
+
 		//-- attempt to send the distill to the prefstore
 		jQuery.ajax({ 
 			type : "POST", 
-			data : "data=" + distillation.stringify(),
+			data : data ,
 			url : PREFSTORE + "submitDistill", 
 			cache : false,
 			timeout : 30000,
@@ -167,24 +221,6 @@
 		
 		//-- specify that the "last page" failed
 		window.localStorage.setItem( "lastPageStatus", cause );
-
-		//-- add the page to the errorCache, ready for another  
-		//-- attempt by first obtaining the cache...
-		/*
-		errorCacheJson = window.localStorage.getItem( "errorCache" );
-		var errorCache = eval('(' + errorCacheJson + ')'); 
-		
-		//-- (creating the cache if it didn't exist)
-		if ( errorCache == null )
-			errorCache = new Array();
-
-		//-- adding the failed distillation to the cache 
-		errorCache.push( distillation );
-
-		//-- and finally restoring it to local storage ready for future reattempts
-		window.localStorage.setItem( "errorCache", JSON.stringify( errorCache ) );
-		*/
-		
 	}
 
 

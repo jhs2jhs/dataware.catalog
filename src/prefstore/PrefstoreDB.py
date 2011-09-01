@@ -5,14 +5,11 @@ Created on 12 April 2011
 
 import MySQLdb
 import logging
-import sys
-import base64
-import hashlib
-import random
-from time import time
 import ConfigParser
+from time import *
+import sys
 
-class prefstoredb( object ):
+class PrefstoreDB( object ):
     ''' classdocs '''
     
     DB_NAME = 'prefstore'
@@ -22,7 +19,8 @@ class prefstoredb( object ):
     TBL_TERM_BLACKLIST = 'tblTermBlacklist'
     TBL_USER_DETAILS = 'tblUserDetails'
     CONFIG_FILE = "prefstore.cfg"
-    SECTION_NAME = "prefstoredb"
+    SECTION_NAME = "PrefstoreDB"
+    
     
     #///////////////////////////////////////
     
@@ -32,30 +30,30 @@ class prefstoredb( object ):
         TBL_TERM_DICTIONARY : """
             CREATE TABLE %s.%s (
             term varchar(128) NOT NULL,
-            termId int(10) unsigned NOT NULL AUTO_INCREMENT,
+            term_id int(10) unsigned NOT NULL AUTO_INCREMENT,
             mtime int(10) unsigned NOT NULL,
             count int(10) unsigned,
             ctime int(10) unsigned,
-            PRIMARY KEY (termId), UNIQUE KEY `UNIQUE` (`term`) )
+            PRIMARY KEY (term_id), UNIQUE KEY `UNIQUE` (`term`) )
             ENGINE=InnoDB DEFAULT CHARSET=latin1;
         """  % ( DB_NAME, TBL_TERM_DICTIONARY ),
         
         TBL_TERM_BLACKLIST : """
             CREATE TABLE %s.%s (
             term varchar(128) NOT NULL,
-            termId int(10) unsigned NOT NULL AUTO_INCREMENT,
-            PRIMARY KEY (termId), UNIQUE KEY `UNIQUE` (`term`) )
+            term_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+            PRIMARY KEY (term_id), UNIQUE KEY `UNIQUE` (`term`) )
             ENGINE=InnoDB DEFAULT CHARSET=latin1;
         """  % ( DB_NAME, TBL_TERM_BLACKLIST ),
         
         TBL_TERM_APPEARANCES : """
             CREATE TABLE %s.%s (
-            user varchar(256) NOT NULL,
+            user_id varchar(256) NOT NULL,
             term varchar(128) NOT NULL,
             docAppearances bigint(20) unsigned NOT NULL,
             totalAppearances bigint(20) unsigned NOT NULL,
-            PRIMARY KEY (user, term),
-            FOREIGN KEY (user) REFERENCES %s(user) ON DELETE CASCADE ON UPDATE CASCADE,
+            PRIMARY KEY (user_id, term),
+            FOREIGN KEY (user_id) REFERENCES %s(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (term) REFERENCES %s(term) ON DELETE CASCADE ON UPDATE CASCADE )
             ENGINE=InnoDB DEFAULT CHARSET=latin1;
             
@@ -63,13 +61,13 @@ class prefstoredb( object ):
        
         TBL_USER_DETAILS : """
             CREATE TABLE %s.%s (
-            user varchar(256) NOT NULL,
+            user_id varchar(256) NOT NULL,
+            screen_name varchar(64),
+            email varchar(256),
             totalDocuments int(10) unsigned NOT NULL,
             lastDistill int(10) unsigned NOT NULL,
             lastMessage int(10) unsigned NOT NULL,
-            password varchar(128) NOT NULL,
-            currentKey varchar(256) DEFAULT NULL,
-            PRIMARY KEY (user) )
+            PRIMARY KEY (user_id) )
             ENGINE=InnoDB DEFAULT CHARSET=latin1;
         """  % ( DB_NAME, TBL_USER_DETAILS ),   
     } 
@@ -78,7 +76,7 @@ class prefstoredb( object ):
     #///////////////////////////////////////
     
     
-    def __init__( self, name = "prefstoredb" ):
+    def __init__( self, name = "PrefstoreDB" ):
             
         #MysqlDb is not thread safe, so program may run more
         #than one connection. As such naming them is useful.
@@ -91,6 +89,7 @@ class prefstoredb( object ):
         self.password =  Config.get( self.SECTION_NAME, "password" )
         self.dbname = Config.get( self.SECTION_NAME, "dbname" )
         self.connected = False;
+
         
     #///////////////////////////////////////
     
@@ -108,6 +107,7 @@ class prefstoredb( object ):
  
         self.cursor = self.conn.cursor( MySQLdb.cursors.DictCursor )
         self.connected = True
+                    
                     
     #///////////////////////////////////////
     
@@ -135,32 +135,10 @@ class prefstoredb( object ):
         self.conn.close()
                      
                             
-    #///////////////////////////////////////
+    #////////////////////////////////////////////////////////////////////////////////////////////
     
     
-    def authenticate( self, user, key ) :
-        
-        if user and key:
-            query = """
-                SELECT 1 FROM %s.%s WHERE user = %s AND currentKey = %s  
-            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s' ) 
-
-            self.cursor.execute( query, ( user, key ) )
-            row = self.cursor.fetchone()
-
-            if ( row is None ):
-                return False
-            else:    
-                return True
-        else:    
-            return False
-
-
-
-    #///////////////////////////////////////
-    
-        
-    def checkTables( self ):
+    def check_tables( self ):
         
         logging.info( "%s: checking system table integrity..." % self.name );
         
@@ -173,13 +151,13 @@ class prefstoredb( object ):
         tables = [ row[ "table_name" ] for row in self.cursor.fetchall() ]
  
         if not self.TBL_USER_DETAILS in tables : 
-            self.createTable( self.TBL_USER_DETAILS )
+            self.create_table( self.TBL_USER_DETAILS )
         if not self.TBL_TERM_DICTIONARY in tables : 
-            self.createTable( self.TBL_TERM_DICTIONARY )   
+            self.create_table( self.TBL_TERM_DICTIONARY )   
         if not self.TBL_TERM_BLACKLIST in tables : 
-            self.createTable( self.TBL_TERM_BLACKLIST )                      
+            self.create_table( self.TBL_TERM_BLACKLIST )                      
         if not self.TBL_TERM_APPEARANCES in tables : 
-            self.createTable( self.TBL_TERM_APPEARANCES )
+            self.create_table( self.TBL_TERM_APPEARANCES )
      
         self.commit();
         
@@ -187,7 +165,7 @@ class prefstoredb( object ):
     #///////////////////////////////////////
     
                
-    def createTable( self, tableName ):
+    def create_table( self, tableName ):
         logging.warning( 
             "%s: missing system table detected: '%s'" 
             % ( self.name, tableName ) 
@@ -202,9 +180,145 @@ class prefstoredb( object ):
               
             self.cursor.execute( self.createQueries[ tableName ] )
 
+
+    #///////////////////////////////////////
+              
+                
+    def insert_user( self, user_id ):
+        
+        if user_id:
+            
+            logging.info( 
+                "%s %s: Adding user '%s' into database" 
+                % ( self.name, "insert_user", user_id ) 
+            );
+            
+            query = """
+                INSERT INTO %s.%s 
+                ( user_id, screen_name, email, totalDocuments, lastDistill, lastMessage ) 
+                VALUES ( %s, null, null, 0, 0, 0 )
+            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s' ) 
+
+            self.cursor.execute( query, ( user_id ) )
+            return True;
+        
+        else:
+            logging.warning( 
+                "%s %s: Was asked to add 'null' user to database" 
+                % (  self.name, "insert_user", ) 
+            );
+            return False;
+
+ 
+    #///////////////////////////////////////
+    
+    
+    def insert_registration( self, user_id, screen_name, email ):
+            
+        if ( user_id and screen_name and email ):
+            
+            logging.info( 
+                "%s %s: Updating user '%s' registration in database" 
+                % ( self.name, "insert_registration", user_id ) 
+            );
+            
+            query = """
+                UPDATE %s.%s SET screen_name = %s, email = %s WHERE user_id = %s
+            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s', '%s' ) 
+
+            self.cursor.execute( query, ( screen_name, email, user_id ) )
+            return True;
+        
+        else:
+            logging.warning( 
+                "%s %s: Registration requested with incomplete details" 
+                % (  self.name, "insert_registration", ) 
+            );
+            return False;    
+
             
     #///////////////////////////////////////
-                   
+
+
+    def fetch_user_by_id( self, user_id ) :
+
+        if user_id :
+            query = """
+                SELECT * FROM %s.%s t where user_id = %s 
+            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s' ) 
+        
+            self.cursor.execute( query, ( user_id, ) )
+            row = self.cursor.fetchone()
+            if not row is None:
+                return row
+            else :
+                return None
+        else :
+            return None     
+            
+            
+    #///////////////////////////////////////
+
+
+    def fetch_user_by_email( self, email ) :
+
+        if email :
+            query = """
+                SELECT * FROM %s.%s t where email = %s 
+            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s' ) 
+        
+            self.cursor.execute( query, ( email, ) )
+            row = self.cursor.fetchone()
+            if not row is None:
+                return row
+            else :
+                return None    
+        else :
+            return None     
+        
+        
+    #///////////////////////////////////////
+                    
+                    
+    def incrementUserInfo(self, user_id = None, mtime = None ) :
+
+        if user_id and mtime:
+  
+            query = """
+                UPDATE %s.%s 
+                SET totalDocuments = totalDocuments + 1, 
+                    lastDistill = %s,
+                    lastMessage = %s
+                WHERE user_id = %s
+            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s', '%s' )
+            
+            update = self.cursor.execute( query, ( mtime, int( time() ), user_id ) )
+
+            if update > 0 :
+                logging.debug( 
+                    "%s: Updated user info for %s" 
+                    % ( self.name, user_id )  
+                )
+                return True
+            else:
+                logging.warning( 
+                    "%s: trying to update an unknown user" 
+                    % self.name 
+                )
+                return False
+        else :
+            logging.warning( 
+                "%s: attempting to update User with incomplete data" 
+                % self.name 
+            )
+            return False
+        
+        
+        
+    #//////////////////////////////////////////////////////////
+    # WEB UPDATER CALLS
+    #//////////////////////////////////////////////////////////               
+        
         
     def getMissingCounts( self ):
        
@@ -237,123 +351,8 @@ class prefstoredb( object ):
             return False
    
     
-    #///////////////////////////////////////
-              
-                
-    #TODO: WHAT HAPPENS IF USER ALREADY EXISTS!?
-    def insertUser( self, user = None, password = None ):
-        
-        if password and user:
-            
-            logging.info( 
-                "%s %s: Adding user '%s' into database" 
-                % ( self.name, "insertUser", user ) 
-            );
-            
-            query = """
-                INSERT INTO %s.%s 
-                ( user, totalDocuments, lastDistill, lastMessage, password, currentKey ) 
-                VALUES ( %s, 0, 0, 0, %s, null )
-            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s' ) 
-
-            self.cursor.execute( query, ( user, password ) )
-            return True;
-        
-        else:
-            logging.warning( 
-                "%s %s: Adding user '%s' with pass '%s': ignoring..." 
-                % (  self.name, "insertUser", user, password ) 
-            );
-            return False;
- 
-
-    #///////////////////////////////////////
-       
-       
-    def checkLogin( self, user, password ):           
-        
-        if user:
-            query = """
-                SELECT password FROM %s.%s where user = %s  
-            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', ) 
-        
-            self.cursor.execute( query, ( user, ) )
-            row = self.cursor.fetchone()
-
-            if ( row is None ):
-                return None
-            
-            if ( password == row.get( "password" ) ):
-                key = self.createNewUserKey( user )
-                return key 
-            else:    
-                return None
-        else:    
-            return None
- 
- 
-    #///////////////////////////////////////
-              
-                
-    def createNewUserKey( self, user = None):
-        
-        if ( user ):
-            key = base64.b64encode(  
-                    hashlib.sha256( 
-                        str( random.getrandbits(256) ) 
-                    ).digest() 
-                )  
-            
-            #replace plus signs with asterisks. Plus signs are reserved
-            #characters in ajax transmissions, so just cause problems
-            key = key.replace( '+', '*' ) 
-                
-            query = "UPDATE %s.%s SET currentKey = %s WHERE user = %s" \
-                % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s' )  
-            
-            self.cursor.execute( query, ( key, user ) )
-            return key
-        
-
-    #///////////////////////////////////////
-                    
-                    
-    def incrementUserInfo(self, user = None, mtime = None ) :
-        
-        if user and mtime:
-            
-            query = """
-                UPDATE %s.%s 
-                SET totalDocuments = totalDocuments + 1, 
-                    lastDistill = %s,
-                    lastMessage = %s
-                WHERE user = %s
-            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s', '%s' )
-            
-            update = self.cursor.execute( query, ( mtime, int( time() ), user ) )
-
-            if update > 0 :
-                logging.debug( 
-                    "%s: Updated user info for %s" 
-                    % ( self.name, user )  
-                )
-                return True
-            else:
-                logging.warning( 
-                    "%s: trying to update an unknown user" 
-                    % self.name 
-                )
-                return False
-        else :
-            logging.warning( 
-                "%s: attempting to update User with incomplete data" 
-                % self.name 
-            )
-            return False
-        
-        
-    #///////////////////////////////////////
-            
+    #///////////////////////////////////////   
+    
     
     def insertDictionaryTerm( self, term = None ):
 
@@ -398,33 +397,33 @@ class prefstoredb( object ):
     #///////////////////////////////////////
               
                 
-    def updateTermAppearance( self, user = None, term = None, freq = 0 ):
+    def updateTermAppearance( self, user_id = None, term = None, freq = 0 ):
         
         try:
-            if term and user:
+            if term and user_id:
                 
                 logging.debug( 
                     "%s %s: Updating term '%s' for user '%s': +%d appearances" 
-                    % ( self.name, "updateTermAppearance", term, user, freq ) 
+                    % ( self.name, "updateTermAppearance", term, user_id, freq ) 
                 );
-                
                 query = """
-                    INSERT INTO %s.%s ( user, term, docAppearances, totalAppearances ) 
+                    INSERT INTO %s.%s ( user_id, term, docAppearances, totalAppearances ) 
                     VALUES ( %s, %s, %s, %s )
                     ON DUPLICATE KEY UPDATE 
                     docAppearances = docAppearances + 1, 
                     totalAppearances = totalAppearances + %s
                 """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES, '%s', '%s', '%s', '%s', '%s' )
-
-                self.cursor.execute( query, ( user, term, 1, freq, freq ) )
                 
+                self.cursor.execute( query, ( user_id, term, 1, freq, freq ) )
+                  
             else:
                 logging.warning( 
                     "%s %s: Updating term '%s' for user '%s': ignoring..." 
-                    % ( self.name, "updateTermAppearance" , term, user, freq ) 
+                    % ( self.name, "updateTermAppearance" , term, user_id, freq ) 
                 );
             
-        except:
+        except Exception, e:
+            print e
             logging.error(
                 "%s %s: error %s" 
                 % ( self.name, "updateTermAppearance" , sys.exc_info()[0] ) 
@@ -434,14 +433,14 @@ class prefstoredb( object ):
     #///////////////////////////////////////             
               
               
-    def getTermAppearance( self, user, term ):
+    def getTermAppearance( self, user_id, term ):
         
-        if user and term :
+        if user_id and term :
             query = """
-                SELECT * FROM %s.%s t where user = %s and term = %s 
+                SELECT * FROM %s.%s t where user_id = %s and term = %s 
             """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES, '%s', '%s' ) 
         
-            self.cursor.execute( query, ( user, term ) )
+            self.cursor.execute( query, ( user_id, term ) )
             row = self.cursor.fetchone()
             if not row is None:
                 return row
@@ -579,5 +578,3 @@ class prefstoredb( object ):
                 "%s %s: Error %s" 
                 % ( self.name, "blacklistTerm",sys.exc_info()[0] ) 
             )
-
-
