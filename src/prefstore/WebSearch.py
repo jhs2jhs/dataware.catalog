@@ -4,7 +4,10 @@ Created on 18 Apr 2011
 @author: psxjog
 '''
 
-import urllib, json, logging, sys
+import urllib
+import json
+import logging
+import sys
 
 class WebSearch( object ):
     ''' classdocs '''
