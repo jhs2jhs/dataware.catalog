@@ -215,9 +215,9 @@ class RegisterException ( Exception ):
 def web_main( ):
     
     try:
-        user_details = check_login()
-        if ( user_details ):
-            return "Welcome to the prefstore, user: %s" % ( user_details, )
+        user = check_login()
+        if ( user ):
+            return "Welcome to the prefstore, user: %s" % ( user, )
         else:
             return "Welcome to the prefstore. Please login."
     
@@ -251,6 +251,8 @@ def valid_name( str ):
 @route( '/register', method = "GET" )
 def register():
     
+    #TODO: first check the user is logged in!
+    
     try:
         user_id = extract_user_id()
     except LoginException, e:
@@ -262,7 +264,7 @@ def register():
     
     #if the user has submitted registration info, parse it
     try: 
-        request.GET[ "submit" ]
+        request.GET[ "submission" ]
         submission = True;
     except:
         submission = False
@@ -300,8 +302,25 @@ def register():
             redirect( ROOT_PAGE )
 
     #if this is the first visit to the page, or there are errors 
-    return  "registration: %s " % ( errors, )
-        
+    return  """
+        <div id="registerBox" class="displayBox">
+        <form action="%s/register" method="GET" >
+            <div class="left">Screen Name</div>
+            <div class="right" >
+                <input id="jid" class="text" name="screen_name" type="text" />
+            </div>
+            <div class="left">Email</div>
+            <div class="right">
+                <input id="email" class="text" name="email" type="text" />
+            </div>
+            <div id="loginMessage" class="loginMessage"></div>
+            <input type="hidden" name="submission" value="True" />
+            <input type="submit" value="Register" />
+                </div>
+            </form>
+        </div>
+    """ % ( REALM, )
+
 
 #///////////////////////////////////////////////
 
@@ -358,11 +377,12 @@ def check_login():
         #and finally lets check to see if the user has registered their details
         if ( user[ "screen_name" ] is None ):
             raise RegisterException()
-        return user_id
+        
+        return user
         
     #if the user has made it this far, their page can be processed accordingly
     else:
-        return False   
+        return None   
     
  
     
@@ -568,7 +588,116 @@ def processDistill( user, data ) :
     #And return from the function successfully
     return True
         
+
+#///////////////////////////////////////////////   
+
+
+@route('/static/:filename')
+def get_static_file(filename):
+    return static_file(filename, root='static/')
+
+
+#///////////////////////////////////////////////  
+
+   
+@route('/data')
+def data():
+    
+    try:
+        user = check_login()
+    except RegisterException, e:
+        redirect( "/register" )
+    except LoginException, e:
+        return error( e.msg )
+    except Exception, e:
+        return error( e )        
         
+    #if the user doesn't exist or is not logged in, send them home
+    if ( not user ) :
+        redirect( ROOT_PAGE )
+    
+    try:
+        type = request.GET[ "type" ]
+    except:
+        type = None
+        
+        
+    try:
+        message = "top 500 terms by total appearances"
+        match_type = ""
+        search_term = ""
+        order_by = ""
+        direction = ""
+        
+        if ( type == "search" ):
+            try:
+                search_term = request.GET[ "search_term" ]
+                match_type = request.GET[ "match_type" ] 
+            except:
+                pass
+            results =  prefdb.search_terms( user[ "user_id" ], search_term, match_type )
+            message = "'%s' search for '%s' - %d results" % ( match_type, search_term, len( results ) ) 
+        
+        elif ( type == "filter" ):
+            try:
+                direction = request.GET[ "direction" ]
+                order_by = request.GET[ "order_by" ] 
+            except:
+                pass
+            results =  prefdb.fetch_terms( user[ "user_id" ], order_by, direction  )
+            message = "filtered on '%s' - %s %d results" % ( 
+                order_by, 
+                "bottom" if direction == "ASC" else "top", 
+                len( results )
+            ) 
+        else:
+            results =  prefdb.fetch_terms( user[ "user_id" ] )
+            message = "top 500 results" 
+        
+        
+        data = ""
+        
+        if results:
+            for row in results:
+                
+                term = row[ 'term' ]
+                appearances = row[ 'total_appearances' ]
+                inDocuments = row[ 'doc_appearances' ]
+                #TODO: calculate this. Its the relative term frequency
+                relevence = 0.32
+                #TODO: Divide this by the total web docs.
+                prevalence = row[ 'count' ]
+                
+                #TODO: Add this field to the database, and fix all the bugs it causes!
+                last_seen = 1315410841
+                last_seen_str = time.strftime("%d %b %Y %H:%M", time.gmtime( last_seen ) )
+                
+                data += """
+                    { c:[{v:'%s'},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:'%s'}]},
+                """ % ( 
+                    term, 
+                    appearances, str( appearances ), 
+                    inDocuments, str( inDocuments ),
+                    prevalence, str( prevalence ),
+                    relevence, str( relevence ),            
+                    last_seen, last_seen_str
+                )
+        
+        return template(
+            'data_management_template',
+             data=data,
+             type=type,
+             search_term=search_term,
+             match_type=match_type,
+             order_by=order_by, 
+             direction=direction,
+             message=message
+        )
+  
+    except Exception, e:
+        return error( e )        
+  
+
            
 #//////////////////////////////////////////////////////////
 # MAIN FUNCTION

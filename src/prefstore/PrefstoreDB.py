@@ -50,8 +50,8 @@ class PrefstoreDB( object ):
             CREATE TABLE %s.%s (
             user_id varchar(256) NOT NULL,
             term varchar(128) NOT NULL,
-            docAppearances bigint(20) unsigned NOT NULL,
-            totalAppearances bigint(20) unsigned NOT NULL,
+            doc_appearances bigint(20) unsigned NOT NULL,
+            total_appearances bigint(20) unsigned NOT NULL,
             PRIMARY KEY (user_id, term),
             FOREIGN KEY (user_id) REFERENCES %s(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (term) REFERENCES %s(term) ON DELETE CASCADE ON UPDATE CASCADE )
@@ -64,9 +64,9 @@ class PrefstoreDB( object ):
             user_id varchar(256) NOT NULL,
             screen_name varchar(64),
             email varchar(256),
-            totalDocuments int(10) unsigned NOT NULL,
-            lastDistill int(10) unsigned NOT NULL,
-            lastMessage int(10) unsigned NOT NULL,
+            total_documents int(10) unsigned NOT NULL,
+            last_distill int(10) unsigned NOT NULL,
+            last_message int(10) unsigned NOT NULL,
             PRIMARY KEY (user_id) )
             ENGINE=InnoDB DEFAULT CHARSET=latin1;
         """  % ( DB_NAME, TBL_USER_DETAILS ),   
@@ -195,7 +195,7 @@ class PrefstoreDB( object ):
             
             query = """
                 INSERT INTO %s.%s 
-                ( user_id, screen_name, email, totalDocuments, lastDistill, lastMessage ) 
+                ( user_id, screen_name, email, total_documents, last_distill, last_message ) 
                 VALUES ( %s, null, null, 0, 0, 0 )
             """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s' ) 
 
@@ -286,9 +286,9 @@ class PrefstoreDB( object ):
   
             query = """
                 UPDATE %s.%s 
-                SET totalDocuments = totalDocuments + 1, 
-                    lastDistill = %s,
-                    lastMessage = %s
+                SET total_documents = total_documents + 1, 
+                    last_distill = %s,
+                    last_message = %s
                 WHERE user_id = %s
             """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s', '%s' )
             
@@ -407,11 +407,11 @@ class PrefstoreDB( object ):
                     % ( self.name, "updateTermAppearance", term, user_id, freq ) 
                 );
                 query = """
-                    INSERT INTO %s.%s ( user_id, term, docAppearances, totalAppearances ) 
+                    INSERT INTO %s.%s ( user_id, term, doc_appearances, total_appearances ) 
                     VALUES ( %s, %s, %s, %s )
                     ON DUPLICATE KEY UPDATE 
-                    docAppearances = docAppearances + 1, 
-                    totalAppearances = totalAppearances + %s
+                    doc_appearances = doc_appearances + 1, 
+                    total_appearances = total_appearances + %s
                 """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES, '%s', '%s', '%s', '%s', '%s' )
                 
                 self.cursor.execute( query, ( user_id, term, 1, freq, freq ) )
@@ -578,3 +578,79 @@ class PrefstoreDB( object ):
                 "%s %s: Error %s" 
                 % ( self.name, "blacklistTerm",sys.exc_info()[0] ) 
             )
+
+
+    #///////////////////////////////////////
+
+
+    def fetch_terms( self, 
+        user_id, 
+        order_by='total_appearances',
+        direction='DESC' ) :
+
+        FIELDS = [ "term", "total_appearances", "doc_appearances" ]
+        LIMIT = 500
+        
+        if user_id and order_by in FIELDS:
+            print 1
+            query = """
+                SELECT t.*, d.count FROM %s.%s t, %s.%s d 
+                WHERE user_id = %s
+                AND t.term = d.term
+                ORDER BY t.%s %s
+                LIMIT %s
+            """  % ( 
+                self.DB_NAME, self.TBL_TERM_APPEARANCES, 
+                self.DB_NAME, self.TBL_TERM_DICTIONARY,
+                '%s', order_by, direction, '%s' ) 
+        
+            self.cursor.execute( query, ( user_id, LIMIT ) )
+            results = self.cursor.fetchall()
+            if not results is None:
+                return results
+            else :
+                return {}
+        else :
+            return {}     
+        
+        
+    #///////////////////////////////////////
+
+
+    def search_terms( self, 
+        user_id, 
+        search_term,
+        match_type="exact" ) :
+        
+        MATCH_TYPES = {
+            "exact":"t.term = '%s'" % ( search_term, ),
+            "starts":"t.term LIKE '%s'" % (  search_term + "%%", ),
+            "contains":"t.term LIKE '%s'" % ( "%%" + search_term + "%%", ), 
+            "ends":"t.term LIKE '%s'" % ( "%%" + search_term, ),             
+        }
+        
+        LIMIT = 500
+        
+        if user_id and search_term and match_type in MATCH_TYPES.keys():
+            
+            query = """
+                SELECT t.*, d.count FROM %s.%s t, %s.%s d 
+                WHERE user_id = %s
+                AND t.term = d.term
+                AND %s
+                ORDER BY t.term
+                LIMIT %s
+            """  % ( 
+                self.DB_NAME, self.TBL_TERM_APPEARANCES, 
+                self.DB_NAME, self.TBL_TERM_DICTIONARY,
+                '%s', MATCH_TYPES[ match_type ], LIMIT ) 
+
+            self.cursor.execute( query, ( user_id ) )
+            results = self.cursor.fetchall()
+            
+            if not results is None:
+                return results
+            else :
+                return {}
+        else :
+            return {}    

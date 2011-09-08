@@ -16,7 +16,8 @@ import logging
  
     
 #TODO: SAFETY CALLS ANYONE?
-    
+#TODO: Still need a logout even when the person hasn't registered (maybe call it cancel?)
+#TODO: how to prevent accidental "google logins". Is this you?, etc.
 #///////////////////////////////////////////////
 
 
