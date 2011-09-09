@@ -589,7 +589,7 @@ class PrefstoreDB( object ):
         order_by='total_appearances',
         direction='DESC' ) :
 
-        FIELDS = [ "term", "total_appearances", "doc_appearances" ]
+        FIELDS = [ "term", "total_appearances", "doc_appearances", "last_seen" ]
         LIMIT = 500
         
         if user_id and order_by in FIELDS:
