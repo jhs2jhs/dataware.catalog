@@ -111,10 +111,29 @@
 		<div style="text-align:right; border:1px solid #eaeaea; background-color: #fafafa; padding:10 10 0 0;"> 
 			<form name="searchForm" action="/data" method="GET" enctype="multipart/form-data">
 				<select name="match_type" style="width:175px;">
+%if match_type == 'exact':
 					<option selected="selected" value="exact">The exact term...</option>
+%else:
+					<option value="exact">The exact term...</option>
+%end
+
+%if match_type == 'contains':
+					<option selected="selected" value="contains">A term containing...</option>
+%else:
 					<option value="contains">A term containing...</option>
+%end
+
+%if match_type == 'starts':
+					<option selected="selected" value="starts">A term starting with...</option>
+%else:
 					<option value="starts">A term starting with...</option>
+%end
+
+%if match_type == 'ends':
+					<option selected="selected" value="ends">A term ending with...</option>
+%else:
 					<option value="ends">A term ending with...</option>
+%end
 				</select>					
 				<input type="text" name="search_term" value="{{search_term}}" style="width:175px;"/><br/>
 				<input type="hidden" name="type" value="search"/>
@@ -128,16 +147,55 @@
 		<div style="text-align:right; border:1px solid #eaeaea; background-color: #fafafa; padding:10 10 0 0;"> 
 			<form name="filterForm" action="/data" method="GET" enctype="multipart/form-data">
 				<select name="direction" style="width:175px;">
+
+%if direction == 'ASC':
+					<option value="DESC">top 500 terms</option>
+					<option selected="selected" value="ASC">bottom 500 terms</option>
+%else:
 					<option selected="selected" value="DESC">top 500 terms</option>
 					<option value="ASC">bottom 500 terms</option>
+%end
+
+					
 				</select><br/>
 				<select name="order_by" style="width:175px;">
+
+%if order_by == 'term':
 					<option selected="selected" value="term">by alphabetical order</option>
+%else:
+					<option value="term">by alphabetical order</option>
+%end
+
+%if order_by == 'total_appearances':
+					<option selected="selected" value="total_appearances">by total appearances</option>
+%else:
 					<option value="total_appearances">by total appearances</option>
+%end
+
+%if order_by == 'doc_appearances':
+					<option selected="selected" value="doc_appearances">by doc appearances</option>
+%else:
 					<option value="doc_appearances">by doc appearances</option>
+%end
+
+%if order_by == 'prevalence':
+					<option selected="selected" value="prevalence">by prevalence on web</option>
+%else:
 					<option value="prevalence">by prevalence on web</option>
+%end
+
+%if order_by == 'relevance':
+					<option selected="selected" value="relevance">by relevence to you</option>
+%else:
 					<option value="relevance">by relevence to you</option>
+%end
+
+%if order_by == 'last_seen':
+					<option selected="selected" value="last_seen">by time last seen</option>
+%else:
 					<option value="last_seen">by time last seen</option>
+%end
+
 				</select><br/>
 				<input type="hidden" name="type" value="filter"/>
 				<span><a href="javascript:document.filterForm.submit();">Fetch</a></span>
