@@ -6,7 +6,7 @@ Created on 12 April 2011
 import MySQLdb
 import logging
 import ConfigParser
-from time import *
+from time import * #@UnusedWildImport
 import sys
 
 class PrefstoreDB( object ):
@@ -20,11 +20,11 @@ class PrefstoreDB( object ):
     TBL_USER_DETAILS = 'tblUserDetails'
     CONFIG_FILE = "prefstore.cfg"
     SECTION_NAME = "PrefstoreDB"
-    
+
     
     #///////////////////////////////////////
-    
-    
+
+ 
     createQueries = { 
                
         TBL_TERM_DICTIONARY : """
@@ -52,6 +52,7 @@ class PrefstoreDB( object ):
             term varchar(128) NOT NULL,
             doc_appearances bigint(20) unsigned NOT NULL,
             total_appearances bigint(20) unsigned NOT NULL,
+            last_seen int(10) unsigned NOT NULL,
             PRIMARY KEY (user_id, term),
             FOREIGN KEY (user_id) REFERENCES %s(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (term) REFERENCES %s(term) ON DELETE CASCADE ON UPDATE CASCADE )
@@ -407,14 +408,15 @@ class PrefstoreDB( object ):
                     % ( self.name, "updateTermAppearance", term, user_id, freq ) 
                 );
                 query = """
-                    INSERT INTO %s.%s ( user_id, term, doc_appearances, total_appearances ) 
-                    VALUES ( %s, %s, %s, %s )
+                    INSERT INTO %s.%s ( user_id, term, doc_appearances, total_appearances, last_seen ) 
+                    VALUES ( %s, %s, %s, %s, %s )
                     ON DUPLICATE KEY UPDATE 
                     doc_appearances = doc_appearances + 1, 
-                    total_appearances = total_appearances + %s
-                """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES, '%s', '%s', '%s', '%s', '%s' )
+                    total_appearances = total_appearances + %s,
+                    last_seen = %s
+                """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES, '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
                 
-                self.cursor.execute( query, ( user_id, term, 1, freq, freq ) )
+                self.cursor.execute( query, ( user_id, term, 1, freq, int( time() ), freq, int( time() ) ) )
                   
             else:
                 logging.warning( 
@@ -423,7 +425,6 @@ class PrefstoreDB( object ):
                 );
             
         except Exception, e:
-            print e
             logging.error(
                 "%s %s: error %s" 
                 % ( self.name, "updateTermAppearance" , sys.exc_info()[0] ) 
@@ -592,7 +593,7 @@ class PrefstoreDB( object ):
         LIMIT = 500
         
         if user_id and order_by in FIELDS:
-            print 1
+
             query = """
                 SELECT t.*, d.count FROM %s.%s t, %s.%s d 
                 WHERE user_id = %s
