@@ -669,6 +669,7 @@ def data():
                 prevalence = row[ 'count' ]
                 
                 #TODO: Add this field to the database, and fix all the bugs it causes!
+                #TODO: Should also add ability to blacklist terms at some point
                 last_seen = 1315410841
                 last_seen_str = time.strftime("%d %b %Y %H:%M", time.gmtime( last_seen ) )
                 
@@ -683,7 +684,7 @@ def data():
                     last_seen, last_seen_str
                 )
         
-        return template(
+        return template(     
             'data_management_template',
              data=data,
              type=type,
@@ -697,7 +698,6 @@ def data():
     except Exception, e:
         return error( e )        
   
-
            
 #//////////////////////////////////////////////////////////
 # MAIN FUNCTION
