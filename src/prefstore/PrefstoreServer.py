@@ -3,6 +3,7 @@ Created on 12 April 2011
 @author: jog
 """
 
+from __future__ import division
 import logging
 import json
 import OpenIDManager
@@ -13,6 +14,12 @@ from WebCountUpdater import * #@UnusedWildImport
 import MySQLdb
 import validictory
 
+
+#//////////////////////////////////////////////////////////
+# CONSTANTS
+#//////////////////////////////////////////////////////////
+
+TOTAL_WEB_DOCUMENTS = 25000000000
 
 #//////////////////////////////////////////////////////////
 # DATAWARE WEB-API CALLS
@@ -327,7 +334,7 @@ def register():
 
 @route( '/error', method = "GET" )
 def error( e ):
-    return "error: %s" % ( e )
+    return "%s: %s" % ( type( e ).__name__, e )
 
       
 #///////////////////////////////////////////////  
@@ -539,22 +546,13 @@ def processDistill( user, data ) :
     mtime = data.get( 'mtime' )
     fv = data.get( 'fv' )
     
-    #Update user info, incrementing the number of documents we have received.
-    userUpdated = prefdb.incrementUserInfo( user_id, mtime )
-    
-    if not userUpdated :
-        logging.error( 
-            "%s: User '%s' could not be updated. Ignoring." 
-            % ( "prefstore", user[ "screen_name" ] ) 
-        )
-        return False    
-
     #Split the terms into ones that exist in the db, and ones that don't
     terms = prefdb.removeBlackListed( [ term for term in fv ] )
     existingDictTerms = prefdb.matchExistingTerms( terms )
     newTerms = [ term for term in terms if term not in existingDictTerms ]
     processedTerms = 0
-
+    total_term_appearances = 0
+    
     #Process the terms we haven't seen before
     for term in newTerms:
         try:
@@ -570,19 +568,37 @@ def processDistill( user, data ) :
         try:
             prefdb.updateTermAppearance( user_id, term, fv.get( term ) );    
             processedTerms += 1
+            total_term_appearances += fv.get( term )
         except:
             logging.warning( 
                 "%s: Failed to increment term '%s' for '%s'" 
                 % ( "prefstore", term, user_id ) 
             )
+    
+    #Update user info, incrementing the number of documents we have received.
+    userUpdated = prefdb.incrementUserInfo( 
+        user_id, total_term_appearances, mtime )
+    
+    if not userUpdated :
+        logging.error( 
+            "%s: User '%s' could not be updated. Ignoring." 
+            % ( "prefstore", user[ "screen_name" ] ) 
+        )
+        return False    
             
     #Everything seems okay, so commit the transaction
     prefdb.commit()
     
     #Log the distillation results
     logging.info( 
-        "%s: Message from '%s' (%d terms, %d extant, %d new, %d processed)" 
-        % ( "prefstore", user["screen_name"], len( terms ), len( existingDictTerms ), len( newTerms ), processedTerms ) 
+        "%s: Message from '%s' (%d terms, %d extant, %d new, %d processed)" % ( 
+            "prefstore", 
+            user[ "screen_name" ], 
+            len( terms ), 
+            len( existingDictTerms ), 
+            len( newTerms ), 
+            processedTerms 
+        ) 
     )
     
     #And return from the function successfully
@@ -621,9 +637,8 @@ def data():
     except:
         type = None
         
-        
     try:
-        message = "top 500 terms by total appearances"
+        message = "top 1000 terms by total appearances"
         match_type = ""
         search_term = ""
         order_by = ""
@@ -652,7 +667,7 @@ def data():
             ) 
         else:
             results =  prefdb.fetch_terms( user[ "user_id" ] )
-            message = "top 500 results" 
+            message = "top 1000 results" 
         
         
         data = ""
@@ -661,26 +676,45 @@ def data():
         if results:
             for row in results:
                 
+                #the name of the term
                 term = row[ 'term' ]
-                appearances = row[ 'total_appearances' ]
-                inDocuments = row[ 'doc_appearances' ]
-                #TODO: calculate this. Its the relative term frequency
-                relevence = 0.32
-                #TODO: Divide this by the total web docs.
-                prevalence = row[ 'count' ]
+                
+                #the number of times the user has seen this term
+                total_appearances = row[ 'total_appearances' ] 
+                
+                #the number of documents the term has been seen in
+                doc_appearances = row[ 'doc_appearances' ]
+                
+                #the unix timestamp of when the term was last seen
                 last_seen = row[ 'last_seen' ]
                 
+                #the term frequency in the users model (tf)
+                frequency = total_appearances / user [ "total_term_appearances" ]
+
+                #the number of web documents the term occurs in (df)
+                importance = 0
+                
+                #the users relevance weight for this term (tf-idf)
+                relevance = 0
+                
+                #at this point there may be no count yet
+                if ( row[ 'count' ] > 0 ) :
+                    importance = row[ 'count' ] / TOTAL_WEB_DOCUMENTS
+                    relevance = ( frequency * ( 1 / importance ) )
+                  
                 data += """
-                    { c:[{v:'%s'},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:'%s'}]},
+                    {c:[{v:'%s'},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:'%s'},{v:%d,f:'%s'},{v:%d,f:'%s'},{v:%d,f:'%s'}]},
                 """ % ( 
                     term, 
-                    appearances, str( appearances ), 
-                    inDocuments, str( inDocuments ),
-                    prevalence, str( prevalence ),
-                    relevence, str( relevence ),            
-                    last_seen, time.strftime("%d %b %Y %H:%M", time.gmtime( last_seen ) )
+                    total_appearances,str( total_appearances ), 
+                    doc_appearances, str( doc_appearances ),
+                    frequency, '%.5f%%' % round( frequency * 100, 5 ),  
+                    importance, 'unknown' if ( importance == 0 ) else '%.5f%%' % round( importance * 100, 5 ),
+                    relevance, 'unknown' if ( relevance == 0 ) else '%.4f' % round( relevance * 100, 4 ),
+                    last_seen, time.strftime( "%d %b %Y %H:%M", time.gmtime( last_seen ) )
                 )
-        
+                
+                
         return template(     
             'data_management_template',
              data=data,

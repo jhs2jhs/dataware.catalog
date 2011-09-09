@@ -163,7 +163,7 @@ class ProcessingModule( object ) :
         sandbox.db = self.db
         
         #setup constants available to the query
-        sandbox.TOTAL_WEB_DOCUMENTS = 2000000000
+        sandbox.TOTAL_WEB_DOCUMENTS = 2500000000
         sandbox.user = user
 
         #load the query function into memory

@@ -30,10 +30,11 @@
 			cols:[
 				{id:'A',label:'Term',type:'string'},
 				{id:'B',label:'Appearances',type:'number'},
-				{id:'C',label:'In Documents',type:'number'},
-				{id:'D',label:'Web Prevalence', type:'number'},
-				{id:'E',label:'Relevence', type:'number'},
-				{id:'F',label:'Last Seen (GMT)', type:'timeofday'}],
+				{id:'C',label:'In Docs',type:'number'},
+				{id:'D',label:'Frequency', type:'number'},
+				{id:'E',label:'Web Importance', type:'number'},
+				{id:'F',label:'Relevance to you', type:'number'},
+				{id:'G',label:'Last Seen (GMT)', type:'timeofday'}],
 			rows:[{{data}}]
 		};
 
@@ -55,7 +56,6 @@
 				list +=  data.getValue( selection[ i ].row, 0 );
 			}
 			$("#selectedList").html( list ); 
-
 		});
     }
     
@@ -86,9 +86,9 @@
 				<span >Number rows/page:</span>
 				<select style="font-size: 12px;" onchange="setPagination( this.value )">
 					<option value="10">10</option>
-					<option value="20">20</option>
+					<option selected="selected" value="20">20</option>
 					<option value="50">50</option>
-					<option selected="selected" value="100">100</option>
+					<option value="100">100</option>
 					<option value="">all</option>
 				</select>
 			</div>
@@ -160,40 +160,46 @@
 				</select><br/>
 				<select name="order_by" style="width:175px;">
 
-%if order_by == 'term':
-					<option selected="selected" value="term">by alphabetical order</option>
+%if order_by == 'alphabetical order':
+					<option selected="selected" value="alphabetical order">by alphabetical order</option>
 %else:
-					<option value="term">by alphabetical order</option>
+					<option value="alphabetical order">by alphabetical order</option>
 %end
 
-%if order_by == 'total_appearances':
-					<option selected="selected" value="total_appearances">by total appearances</option>
+%if order_by == 'total appearances':
+					<option selected="selected" value="total appearances">by total appearances</option>
 %else:
-					<option value="total_appearances">by total appearances</option>
+					<option value="total appearances">by total appearances</option>
 %end
 
-%if order_by == 'doc_appearances':
-					<option selected="selected" value="doc_appearances">by doc appearances</option>
+%if order_by == 'doc appearances':
+					<option selected="selected" value="doc appearances">by doc appearances</option>
 %else:
-					<option value="doc_appearances">by doc appearances</option>
+					<option value="doc appearances">by doc appearances</option>
 %end
 
-%if order_by == 'prevalence':
-					<option selected="selected" value="prevalence">by prevalence on web</option>
+%if order_by == 'frequency':
+					<option selected="selected" value="frequency">by overall frequency</option>
 %else:
-					<option value="prevalence">by prevalence on web</option>
+					<option value="frequency">by overall frequency</option>
+%end
+
+%if order_by == 'web importance':
+					<option selected="selected" value="web importance">by importance on web</option>
+%else:
+					<option value="web importance">by importance on web</option>
 %end
 
 %if order_by == 'relevance':
-					<option selected="selected" value="relevance">by relevence to you</option>
+					<option selected="selected" value="relevance">by relevance to you</option>
 %else:
-					<option value="relevance">by relevence to you</option>
+					<option value="relevance">by relevance to you</option>
 %end
 
-%if order_by == 'last_seen':
-					<option selected="selected" value="last_seen">by time last seen</option>
+%if order_by == 'last seen':
+					<option selected="selected" value="last seen">by time last seen</option>
 %else:
-					<option value="last_seen">by time last seen</option>
+					<option value="last seen">by time last seen</option>
 %end
 
 				</select><br/>

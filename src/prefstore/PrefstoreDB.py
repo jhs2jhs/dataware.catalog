@@ -21,7 +21,7 @@ class PrefstoreDB( object ):
     CONFIG_FILE = "prefstore.cfg"
     SECTION_NAME = "PrefstoreDB"
 
-    
+
     #///////////////////////////////////////
 
  
@@ -68,6 +68,7 @@ class PrefstoreDB( object ):
             total_documents int(10) unsigned NOT NULL,
             last_distill int(10) unsigned NOT NULL,
             last_message int(10) unsigned NOT NULL,
+            total_term_appearances bigint(20) NOT NULL DEFAULT 0,
             PRIMARY KEY (user_id) )
             ENGINE=InnoDB DEFAULT CHARSET=latin1;
         """  % ( DB_NAME, TBL_USER_DETAILS ),   
@@ -196,8 +197,8 @@ class PrefstoreDB( object ):
             
             query = """
                 INSERT INTO %s.%s 
-                ( user_id, screen_name, email, total_documents, last_distill, last_message ) 
-                VALUES ( %s, null, null, 0, 0, 0 )
+                ( user_id, screen_name, email, total_documents, last_distill, last_message, total_term_appearances ) 
+                VALUES ( %s, null, null, 0, 0, 0, 0 )
             """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s' ) 
 
             self.cursor.execute( query, ( user_id ) )
@@ -281,19 +282,24 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
                     
                     
-    def incrementUserInfo(self, user_id = None, mtime = None ) :
+    def incrementUserInfo(self, 
+            user_id = None, 
+            total_term_appearances = 1, 
+            mtime = None ) :
 
         if user_id and mtime:
   
             query = """
                 UPDATE %s.%s 
                 SET total_documents = total_documents + 1, 
+                    total_term_appearances = total_term_appearances + %s,
                     last_distill = %s,
                     last_message = %s
                 WHERE user_id = %s
-            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s', '%s' )
+            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s', '%s', '%s' )
             
-            update = self.cursor.execute( query, ( mtime, int( time() ), user_id ) )
+            update = self.cursor.execute( 
+                query, ( total_term_appearances, mtime, int( time() ), user_id ) )
 
             if update > 0 :
                 logging.debug( 
@@ -587,27 +593,50 @@ class PrefstoreDB( object ):
     def fetch_terms( self, 
         user_id, 
         order_by='total_appearances',
-        direction='DESC' ) :
+        direction='DESC',
+        LIMIT = 1000,
+        MIN_WEB_PREVALENCE = 10000,
+        TOTAL_WEB_DOCUMENTS = 25000000000
+    ) :
 
-        FIELDS = [ "term", "total_appearances", "doc_appearances", "last_seen" ]
-        LIMIT = 500
+        FIELDS = { 
+            "alphabetical order":"term", 
+            "total appearances":"total_appearances", 
+            "doc appearances":"doc_appearances",
+            "frequency":"total_appearances", 
+            "web importance":"count",
+            "relevance":"weight",
+            "last seen":"last_seen",
+        }
         
-        if user_id and order_by in FIELDS:
+        if user_id and order_by in FIELDS.keys():
 
             query = """
-                SELECT t.*, d.count FROM %s.%s t, %s.%s d 
+                SELECT 
+                    t.*, 
+                    d.count,
+                    ( t.total_appearances  / (d.count / %d ) ) weight  
+                FROM %s.%s t, %s.%s d 
                 WHERE user_id = %s
                 AND t.term = d.term
-                ORDER BY t.%s %s
+                AND d.count > %d
+                ORDER BY %s %s
                 LIMIT %s
             """  % ( 
+                TOTAL_WEB_DOCUMENTS,
                 self.DB_NAME, self.TBL_TERM_APPEARANCES, 
                 self.DB_NAME, self.TBL_TERM_DICTIONARY,
-                '%s', order_by, direction, '%s' ) 
-        
+                '%s', 
+                MIN_WEB_PREVALENCE, 
+                FIELDS[ order_by ], 
+                direction, 
+                '%s' ) 
+            
             self.cursor.execute( query, ( user_id, LIMIT ) )
             results = self.cursor.fetchall()
+            
             if not results is None:
+                print results
                 return results
             else :
                 return {}
