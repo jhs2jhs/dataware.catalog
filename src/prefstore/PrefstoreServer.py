@@ -657,6 +657,7 @@ def data():
         
         data = ""
         
+        #TODO: Should also add ability to blacklist terms at some point
         if results:
             for row in results:
                 
@@ -667,11 +668,7 @@ def data():
                 relevence = 0.32
                 #TODO: Divide this by the total web docs.
                 prevalence = row[ 'count' ]
-                
-                #TODO: Add this field to the database, and fix all the bugs it causes!
-                #TODO: Should also add ability to blacklist terms at some point
-                last_seen = 1315410841
-                last_seen_str = time.strftime("%d %b %Y %H:%M", time.gmtime( last_seen ) )
+                last_seen = row[ 'last_seen' ]
                 
                 data += """
                     { c:[{v:'%s'},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:'%s'}]},
@@ -681,7 +678,7 @@ def data():
                     inDocuments, str( inDocuments ),
                     prevalence, str( prevalence ),
                     relevence, str( relevence ),            
-                    last_seen, last_seen_str
+                    last_seen, time.strftime("%d %b %Y %H:%M", time.gmtime( last_seen ) )
                 )
         
         return template(     
