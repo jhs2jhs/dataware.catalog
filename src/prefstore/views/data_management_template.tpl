@@ -1,7 +1,7 @@
 <html>
 <head>
 	<title>
-		Prefstore - Data Analysis 2
+		Prefstore - Data Analysis
 	</title>
 
 	<script type="text/javascript" src="http://www.google.com/jsapi">
@@ -13,6 +13,35 @@
 	<script type="text/javascript">
 		google.load('visualization', '1', {packages: ['table']});
 	</script>
+
+
+	<style type='text/css'>
+
+		.table-header {
+			font-size: 13px;
+			font-weight:bold;
+			background-image:url("./static/titleBack.png");
+		}
+
+		.table-row {
+			font-size: 11px;
+		}
+
+		.table-odd-row {
+			font-size: 11px;
+			background-color: #fafafa;
+		}
+
+		.table-selected {
+			font-size: 11px;
+			background-color: #ddddff;
+		}
+
+		.table-hover {
+			font-size: 11px;
+			background-color: #eeeeff;
+		}
+	</style>
 
 	<script type="text/javascript">
 	var termTable;
@@ -33,17 +62,26 @@
 				{id:'C',label:'In Docs',type:'number'},
 				{id:'D',label:'Frequency', type:'number'},
 				{id:'E',label:'Web Importance', type:'number'},
-				{id:'F',label:'Relevance to you', type:'number'},
+				{id:'F',label:'Relevance', type:'number'},
 				{id:'G',label:'Last Seen (GMT)', type:'timeofday'}],
 			rows:[{{data}}]
 		};
 
 		data = new google.visualization.DataTable( dataAsJson );
 		
+		var cssClassNames = {
+			'headerRow': 'table-header',
+			'tableRow': 'table-row',
+			'oddTableRow': 'table-odd-row',
+			'selectedTableRow': 'table-selected',
+			'hoverTableRow': 'table-hover'
+		};
+
 		options[ "page" ] = "enable";
 		options[ "pageSize" ] = 20;
 		options[ "pagingSymbols" ] = { prev: 'prev', next: 'next' };
 		options[ "pagingButtonsConfiguration" ] = "auto";      
+		options[ "cssClassNames" ] = cssClassNames;
 
 		termTable = new google.visualization.Table(document.getElementById( "termTable" ));
 		termTable.draw( data, options );  
@@ -76,8 +114,9 @@
 	</script>
 </head>
 
-<body style="font-family: georgia; font-size:12px; ">
-	<div style="float:left; width:900px;">
+<body style="font-family: georgia; font-size:12px;">
+<div style="margin: auto; height:768px; border:1px dotted gray; width:1020px; text-align:middle;">
+	<div style="float:left; width:800px;">
 		<div style="font-size:12px; margin-bottom:10px;">
 			<div style="margin-top:15px; float:right; font-size:11px; vertical-align:bottom">
 				{{message}}
@@ -95,14 +134,14 @@
 			
 		</div>
 
-		<div id="termTable">next</div>
+		<div id="termTable" style="width:800;">next</div>
 	</div>
 
-	<div style="text-align:center; margin:34 0 0 20; float:left; border:1px solid #fafafa; width:220px;">
+	<div style="text-align:center; margin:34 0 0 20; float:left; border:1px solid #fafafa; width:175px;">
 		<div style="padding-top: 5px; height:23px; font-weight:bold; border:1px solid #dadada;"> 
 			Selected Terms:
 		</div>
-		<div id="selectedList" style="min-height:50px; border:1px solid #eaeaea; background-color: #fafafa; padding:5px;"> 
+		<div id="selectedList" style="min-height:50px; border:1px solid #eaeaea; background-color: #fafafa; padding:5px; font-size:11px;"> 
 		</div>
 		
 		<div style="margin-top:15px; padding-top: 5px; height:23px; font-weight:bold; border:1px solid #dadada;"> 
@@ -110,32 +149,34 @@
 		</div>
 		<div style="text-align:right; border:1px solid #eaeaea; background-color: #fafafa; padding:10 10 0 0;"> 
 			<form name="searchForm" action="/data" method="GET" enctype="multipart/form-data">
-				<select name="match_type" style="width:175px;">
-%if match_type == 'exact':
-					<option selected="selected" value="exact">The exact term...</option>
-%else:
-					<option value="exact">The exact term...</option>
-%end
 
-%if match_type == 'contains':
+				<select name="match_type" style="width:150px; font-size:11px;">
+					%if match_type == 'contains':
 					<option selected="selected" value="contains">A term containing...</option>
-%else:
+					%else:
 					<option value="contains">A term containing...</option>
-%end
+					%end
 
-%if match_type == 'starts':
+					%if match_type == 'exact':
+					<option selected="selected" value="exact">The exact term...</option>
+					%else:
+					<option value="exact">The exact term...</option>
+					%end
+
+					%if match_type == 'starts':
 					<option selected="selected" value="starts">A term starting with...</option>
-%else:
+					%else:
 					<option value="starts">A term starting with...</option>
-%end
+					%end
 
-%if match_type == 'ends':
+					%if match_type == 'ends':
 					<option selected="selected" value="ends">A term ending with...</option>
-%else:
+					%else:
 					<option value="ends">A term ending with...</option>
-%end
-				</select>					
-				<input type="text" name="search_term" value="{{search_term}}" style="width:175px;"/><br/>
+					%end
+				</select>		
+				
+				<input type="text" name="search_term" value="{{search_term}}" style="width:150px;"/><br/>
 				<input type="hidden" name="type" value="search"/>
 				<span><a href="javascript:document.searchForm.submit();">Search</a></span>
 			</form>
@@ -146,63 +187,62 @@
 		</div>
 		<div style="text-align:right; border:1px solid #eaeaea; background-color: #fafafa; padding:10 10 0 0;"> 
 			<form name="filterForm" action="/data" method="GET" enctype="multipart/form-data">
-				<select name="direction" style="width:175px;">
+				
+				<select name="direction" style="width:150px; font-size:11px;">
 
-%if direction == 'ASC':
-					<option value="DESC">top 500 terms</option>
-					<option selected="selected" value="ASC">bottom 500 terms</option>
-%else:
-					<option selected="selected" value="DESC">top 500 terms</option>
-					<option value="ASC">bottom 500 terms</option>
-%end
-
-					
+					%if direction == 'ASC':
+					<option value="DESC">top 1000 terms</option>
+					<option selected="selected" value="ASC">bottom 1000 terms</option>
+					%else:
+					<option selected="selected" value="DESC">top 1000 terms</option>
+					<option value="ASC">bottom 1000 terms</option>
+					%end
 				</select><br/>
-				<select name="order_by" style="width:175px;">
 
-%if order_by == 'alphabetical order':
+				<select name="order_by" style="width:150px; font-size:11px;">
+					%if order_by == 'alphabetical order':
 					<option selected="selected" value="alphabetical order">by alphabetical order</option>
-%else:
+					%else:
 					<option value="alphabetical order">by alphabetical order</option>
-%end
+					%end
 
-%if order_by == 'total appearances':
+					%if order_by == 'total appearances':
 					<option selected="selected" value="total appearances">by total appearances</option>
-%else:
+					%else:
 					<option value="total appearances">by total appearances</option>
-%end
+					%end
 
-%if order_by == 'doc appearances':
+					%if order_by == 'doc appearances':
 					<option selected="selected" value="doc appearances">by doc appearances</option>
-%else:
+					%else:
 					<option value="doc appearances">by doc appearances</option>
-%end
+					%end
 
-%if order_by == 'frequency':
+					%if order_by == 'frequency':
 					<option selected="selected" value="frequency">by overall frequency</option>
-%else:
+					%else:
 					<option value="frequency">by overall frequency</option>
-%end
+					%end
 
-%if order_by == 'web importance':
+					%if order_by == 'web importance':
 					<option selected="selected" value="web importance">by importance on web</option>
-%else:
+					%else:
 					<option value="web importance">by importance on web</option>
-%end
+					%end
 
-%if order_by == 'relevance':
+					%if order_by == 'relevance':
 					<option selected="selected" value="relevance">by relevance to you</option>
-%else:
+					%else:
 					<option value="relevance">by relevance to you</option>
-%end
+					%end
 
-%if order_by == 'last seen':
+					%if order_by == 'last seen':
 					<option selected="selected" value="last seen">by time last seen</option>
-%else:
+					%else:
 					<option value="last seen">by time last seen</option>
-%end
-
+					%end
 				</select><br/>
+
 				<input type="hidden" name="type" value="filter"/>
 				<span><a href="javascript:document.filterForm.submit();">Fetch</a></span>
 			</form>
@@ -210,6 +250,7 @@
 
 		
 	</div>
+</div>
 </body>
 
 </html>
