@@ -594,11 +594,10 @@ class PrefstoreDB( object ):
         user_id, 
         order_by='total_appearances',
         direction='DESC',
-        LIMIT = 1000,
-        MIN_WEB_PREVALENCE = 10000,
-        TOTAL_WEB_DOCUMENTS = 25000000000
+        LIMIT=1000,
+        MIN_WEB_PREVALENCE=10000,
+        TOTAL_WEB_DOCUMENTS=25000000000
     ) :
-
         FIELDS = { 
             "alphabetical order":"term", 
             "total appearances":"total_appearances", 
@@ -636,7 +635,6 @@ class PrefstoreDB( object ):
             results = self.cursor.fetchall()
             
             if not results is None:
-                print results
                 return results
             else :
                 return {}

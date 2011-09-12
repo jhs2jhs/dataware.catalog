@@ -729,6 +729,113 @@ def data():
     except Exception, e:
         return error( e )        
   
+  
+#///////////////////////////////////////////////  
+
+   
+@route('/word_cloud')
+def word_cloud():
+    
+    try:
+        user = check_login()
+    except RegisterException, e:
+        redirect( "/register" )
+    except LoginException, e:
+        return error( e.msg )
+    except Exception, e:
+        return error( e )        
+        
+    #if the user doesn't exist or is not logged in, send them home
+    if ( not user ) :
+        redirect( ROOT_PAGE )
+    
+    try:
+
+        try:
+            order_by = request.GET[ "order_by" ] 
+        except:
+            order_by = "total appearances"
+        
+        results = prefdb.fetch_terms( 
+            user_id=user[ "user_id" ], 
+            order_by=order_by, 
+            direction="DESC", 
+            LIMIT=50, 
+            MIN_WEB_PREVALENCE=30000
+        )
+        
+        message = "The %d terms with highest '%s'" % ( 
+           len( results ), order_by, 
+        ) 
+        
+        
+        data_str = "{'text':'%s', weight:%d, url:'javascript:select(\"%s\")'},"
+        total_appearance_data = ""
+        doc_appearance_data = ""
+        frequency_data = ""
+        web_importance_data = ""        
+        relevance_data = ""
+        
+        #TODO: Should also add ability to blacklist terms at some point
+        if results:
+            for row in results:
+                
+                #the name of the term
+                term = row[ 'term' ]
+                
+                #the number of times the user has seen this term
+                total_appearances = row[ 'total_appearances' ] 
+                
+                #the number of documents the term has been seen in
+                doc_appearances = row[ 'doc_appearances' ]
+                
+                #the unix timestamp of when the term was last seen
+                last_seen = row[ 'last_seen' ]
+                
+                #the term frequency in the users model (tf)
+                frequency = total_appearances / user [ "total_term_appearances" ]
+
+                #the number of web documents the term occurs in (df)
+                importance = 0
+                
+                #the users relevance weight for this term (tf-idf)
+                relevance = 0
+                
+                #at this point there may be no count yet
+                if ( row[ 'count' ] > 0 ) :
+                    importance = row[ 'count' ] / TOTAL_WEB_DOCUMENTS
+                    relevance = ( frequency * ( 1 / importance ) )
+
+
+                total_appearance_data +=  data_str % ( term, total_appearances, term )
+                doc_appearance_data +=  data_str % ( term, doc_appearances, term )
+                web_importance_data +=  data_str % ( term, importance  * 10000, term )
+                relevance_data +=  data_str % ( term, relevance * 10000, term )
+                
+        
+        data =""" {
+            'total appearances':[ %s ],
+            'doc appearances':[ %s ],
+            'web importance':[ %s ],
+            'relevance':[ %s ]
+        } """ % (
+            total_appearance_data[:-1],
+            doc_appearance_data[:-1],
+            web_importance_data[:-1],
+            relevance_data[:-1],               
+        )    
+       
+        return template(     
+            'word_cloud_template',
+             data=data,
+             order_by=order_by, 
+             message=message,
+             match_type="hello"
+        )
+  
+    except Exception, e:
+        return error( e )        
+    
            
 #//////////////////////////////////////////////////////////
 # MAIN FUNCTION
