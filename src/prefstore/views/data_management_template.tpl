@@ -1,121 +1,90 @@
-<html>
-<head>
-	<title>
-		Prefstore - Data Analysis
-	</title>
+%include header
 
-	<script type="text/javascript" src="http://www.google.com/jsapi">
-	</script>
+<script type="text/javascript">
+	google.load('visualization', '1', {packages: ['table']});
+</script>
+
+
+<script type="text/javascript">
+var termTable;
+var data;
+var selection;
+
+var options = {'showRowNumber': true};
+
+/**
+ *
+ */
+function drawVisualization() {
 	
-	<script type="text/javascript" src="./static/jquery-1.6.min.js">
-	</script> 
+	var dataAsJson = {
+		cols:[
+			{id:'A',label:'Term',type:'string'},
+			{id:'B',label:'Appearances',type:'number'},
+			{id:'C',label:'In Docs',type:'number'},
+			{id:'D',label:'Frequency', type:'number'},
+			{id:'E',label:'Web Importance', type:'number'},
+			{id:'F',label:'Relevance', type:'number'},
+			{id:'G',label:'Last Seen (GMT)', type:'timeofday'}],
+		rows:[{{data}}]
+	};
 
-	<script type="text/javascript">
-		google.load('visualization', '1', {packages: ['table']});
-	</script>
+	data = new google.visualization.DataTable( dataAsJson );
+	
+	var cssClassNames = {
+		'headerRow': 'table-header',
+		'tableRow': 'table-row',
+		'oddTableRow': 'table-odd-row',
+		'selectedTableRow': 'table-selected',
+		'hoverTableRow': 'table-hover'
+	};
 
+	options[ "page" ] = "enable";
+	options[ "pageSize" ] = 25;
+	options[ "pagingSymbols" ] = { prev: 'prev', next: 'next' };
+	options[ "pagingButtonsConfiguration" ] = "auto";      
+	options[ "cssClassNames" ] = cssClassNames;
 
-	<style type='text/css'>
+	termTable = new google.visualization.Table(document.getElementById( "termTable" ));
+	termTable.draw( data, options );  
 
-		.table-header {
-			font-size: 13px;
-			font-weight:bold;
-			background-image:url("./static/titleBack.png");
+	google.visualization.events.addListener( termTable, 'select', function() {
+		selection = termTable.getSelection();
+		list = "";
+		for ( i = 0; i < selection.length; i++ ) {
+			if ( list.length>0 ) list+="</br>"
+			list +=  data.getValue( selection[ i ].row, 0 );
 		}
+		$("#selectedList").html( list ); 
+	});
+}
 
-		.table-row {
-			font-size: 11px;
-		}
+google.setOnLoadCallback( drawVisualization );
 
-		.table-odd-row {
-			font-size: 11px;
-			background-color: #fafafa;
-		}
-
-		.table-selected {
-			font-size: 11px;
-			background-color: #ddddff;
-		}
-
-		.table-hover {
-			font-size: 11px;
-			background-color: #eeeeff;
-		}
-	</style>
-
-	<script type="text/javascript">
-	var termTable;
-	var data;
-	var selection;
-
-	var options = {'showRowNumber': true};
-
-	/**
-	 *
-	 */
-	function drawVisualization() {
-    	
-		var dataAsJson = {
-			cols:[
-				{id:'A',label:'Term',type:'string'},
-				{id:'B',label:'Appearances',type:'number'},
-				{id:'C',label:'In Docs',type:'number'},
-				{id:'D',label:'Frequency', type:'number'},
-				{id:'E',label:'Web Importance', type:'number'},
-				{id:'F',label:'Relevance', type:'number'},
-				{id:'G',label:'Last Seen (GMT)', type:'timeofday'}],
-			rows:[{{data}}]
-		};
-
-		data = new google.visualization.DataTable( dataAsJson );
-		
-		var cssClassNames = {
-			'headerRow': 'table-header',
-			'tableRow': 'table-row',
-			'oddTableRow': 'table-odd-row',
-			'selectedTableRow': 'table-selected',
-			'hoverTableRow': 'table-hover'
-		};
-
+//-- sets the number of pages according to the user selection.
+function setPagination( numPages ) {
+	if ( numPages ) {
 		options[ "page" ] = "enable";
-		options[ "pageSize" ] = 25;
-		options[ "pagingSymbols" ] = { prev: 'prev', next: 'next' };
-		options[ "pagingButtonsConfiguration" ] = "auto";      
-		options[ "cssClassNames" ] = cssClassNames;
+		options[ "pageSize" ] = parseInt( numPages, 10 );
+	} else {
+		options[ "page" ] = null;  
+		options[ "pageSize" ] = null;
+	}
+	termTable.draw( data, options );  
+}
 
-		termTable = new google.visualization.Table(document.getElementById( "termTable" ));
-		termTable.draw( data, options );  
+</script>
 
-		google.visualization.events.addListener( termTable, 'select', function() {
-			selection = termTable.getSelection();
-			list = "";
-			for ( i = 0; i < selection.length; i++ ) {
-				if ( list.length>0 ) list+="</br>"
-				list +=  data.getValue( selection[ i ].row, 0 );
-			}
-			$("#selectedList").html( list ); 
-		});
-    }
-    
-    google.setOnLoadCallback( drawVisualization );
 
-    //-- sets the number of pages according to the user selection.
-    function setPagination( numPages ) {
-		if ( numPages ) {
-			options[ "page" ] = "enable";
-			options[ "pageSize" ] = parseInt( numPages, 10 );
-		} else {
-			options[ "page" ] = null;  
-			options[ "pageSize" ] = null;
-		}
-		termTable.draw( data, options );  
-    }
-	
-	</script>
-</head>
 
-<body style="font-family: georgia; font-size:12px;">
-<div style="margin: auto; height:768px; width:1020px; text-align:middle;">
+<div class="sub_header">
+	<div class="page-name">ANALYSIS</div>
+	<div class="page-description">A TABULAR BREAKDOWN OF YOUR PREFSTORE MODEL</div>
+</div>
+
+
+<div class="main">
+
 	<div style="float:left; width:800px;">
 		<div style="font-size:12px; margin-bottom:10px;">
 			<div style="margin-top:15px; float:right; font-size:11px; vertical-align:bottom">
@@ -148,7 +117,7 @@
 			Search For:
 		</div>
 		<div style="text-align:right; border:1px solid #eaeaea; background-color: #fafafa; padding:10 10 0 0;"> 
-			<form name="searchForm" action="/data" method="GET" enctype="multipart/form-data">
+			<form name="searchForm" action="/analysis" method="GET" enctype="multipart/form-data">
 
 				<select name="match_type" style="width:150px; font-size:11px;">
 					%if match_type == 'contains':
@@ -186,7 +155,7 @@
 			Filter Terms:
 		</div>
 		<div style="text-align:right; border:1px solid #eaeaea; background-color: #fafafa; padding:10 10 0 0;"> 
-			<form name="filterForm" action="/data" method="GET" enctype="multipart/form-data">
+			<form name="filterForm" action="/analysis" method="GET" enctype="multipart/form-data">
 				
 				<select name="direction" style="width:150px; font-size:11px;">
 
@@ -247,10 +216,7 @@
 				<span><a href="javascript:document.filterForm.submit();">Fetch</a></span>
 			</form>
 		</div>
-
-		
 	</div>
 </div>
-</body>
 
-</html>
+%include footer

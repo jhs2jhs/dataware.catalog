@@ -1,0 +1,148 @@
+body {
+	padding: 0px;
+	margin:0px;
+}
+
+.top {
+	background-color: #ffffff;
+	width: 1020px;
+	margin: auto;
+}
+
+.bottom {
+	background-color: #eeeeff;
+}
+
+.header {
+	border-bottom:1px solid #dadada;
+	height: 90px;
+}
+
+.logo {
+	float: left;
+	padding: 20 0 25 0;
+	font-family: georgia;
+	font-size: 35px;
+	font-weight:bold;
+}
+
+.menu_button {
+	float: right;
+	width: 75px;
+	height: 60px;
+	text-align: left;
+	padding-top: 30px;
+	padding-left: 20px;
+	padding-right: 20px;
+	font-family: georgia;
+	line-height: 120%;
+}
+
+.menu_button_selected {
+	background-color: #00bcf2;
+}
+
+.top-menu-item {
+	color: black;
+	font-size: 12px;
+	font-weight: bold;
+}
+
+.menu-description {
+	color: gray;
+	font-size: 12px;
+	font-style: italic;
+}
+
+
+.sub_header {
+	border-bottom:1px solid #dadada;
+	height: 50px;
+	padding: 20 0 5 0;
+	font-family: arial;
+	vertical-align: middle;
+}
+
+.page-name {
+	font-weight: bold;
+	float: left;
+	font-size:25px;
+}
+
+.page-name-selected {
+	color: white;
+}
+
+.page-description {
+	float:left;
+	margin-top:10px;
+	margin-left: 225px;
+	font-size:13px;
+	color:#999999;
+}
+
+.page-description-selected {
+	color: black;
+}
+
+.main {
+	font-family: georgia;
+	min-height:650px;
+}
+
+.bottom {
+	min-height:220px;
+}
+
+
+
+#wordcloud 
+{
+	width: 800px;
+	height: 500px;
+}
+
+#wordcloud span.w10, #wordcloud span.w9, #wordcloud span.w8, #wordcloud span.w7 {
+	text-shadow: 0px 1px 1px #ccc;
+}
+
+#wordcloud span.w3, #wordcloud span.w2, #wordcloud span.w1 {
+	text-shadow: 0px 1px 1px #fff;
+}
+
+a {
+	color:#5555ff;
+	font-size: 11px; 
+}
+
+a:hover {
+	color: green;
+}
+
+
+
+
+.table-header {
+			font-size: 13px;
+			font-weight:bold;
+			background-image:url("./static/titleBack.png");
+		}
+
+		.table-row {
+			font-size: 11px;
+		}
+
+		.table-odd-row {
+			font-size: 11px;
+			background-color: #fafafa;
+		}
+
+		.table-selected {
+			font-size: 11px;
+			background-color: #ddddff;
+		}
+
+		.table-hover {
+			font-size: 11px;
+			background-color: #eeeeff;
+		}

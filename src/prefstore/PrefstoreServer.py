@@ -616,8 +616,8 @@ def get_static_file(filename):
 #///////////////////////////////////////////////  
 
    
-@route('/data')
-def data():
+@route('/analysis')
+def analysis():
     
     try:
         user = check_login()
@@ -656,9 +656,14 @@ def data():
         elif ( type == "filter" ):
             try:
                 direction = request.GET[ "direction" ]
+            except:
+                direction = "DESC"
+                
+            try:
                 order_by = request.GET[ "order_by" ] 
             except:
-                pass
+                order_by = "total appearances"
+                
             results =  prefdb.fetch_terms( user[ "user_id" ], order_by, direction  )
             message = "filtered on '%s' - %s %d results" % ( 
                 order_by, 
@@ -667,8 +672,7 @@ def data():
             ) 
         else:
             results =  prefdb.fetch_terms( user[ "user_id" ] )
-            message = "top 1000 results" 
-        
+            message = "top 1000 results by 'total appearances'" 
         
         data = ""
         
@@ -733,7 +737,7 @@ def data():
 #///////////////////////////////////////////////  
 
    
-@route('/word_cloud')
+@route('/visualize')
 def word_cloud():
     
     try:
@@ -835,8 +839,38 @@ def word_cloud():
   
     except Exception, e:
         return error( e )        
+      
+  
+#///////////////////////////////////////////////  
     
-           
+    
+@route('/home')
+def home():
+    return template(     
+        'home_page_template'
+    );      
+  
+  
+#///////////////////////////////////////////////  
+    
+    
+@route('/settings')
+def settings():
+    return template(     
+        'home_page_template'
+    );
+    
+   
+#///////////////////////////////////////////////  
+    
+    
+@route('/audit')
+def audit():
+    return template(     
+        'home_page_template'
+    );
+    
+            
 #//////////////////////////////////////////////////////////
 # MAIN FUNCTION
 #//////////////////////////////////////////////////////////

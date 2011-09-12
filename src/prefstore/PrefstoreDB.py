@@ -592,7 +592,7 @@ class PrefstoreDB( object ):
 
     def fetch_terms( self, 
         user_id, 
-        order_by='total_appearances',
+        order_by='total appearances',
         direction='DESC',
         LIMIT=1000,
         MIN_WEB_PREVALENCE=10000,
