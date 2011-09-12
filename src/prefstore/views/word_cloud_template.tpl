@@ -97,7 +97,7 @@
 </head> 
 
 <body style="font-family: georgia; font-size:12px;">
-<div style="margin: auto; height:768px; border:1px dotted gray; width:1020px; text-align:middle; ">
+<div style="margin: auto; height:768px; width:1020px; text-align:middle; ">
 
 	<div style="float:left; width:800px;">
 		<div style="text-align:right; margin-top:15px; margin-bottom:5px; font-size:11px; vertical-align:bottom">
@@ -168,7 +168,6 @@
 					%end
 				</select><br/>
 
-				<input type="hidden" name="type" value="filter"/>
 				<span><a href="javascript:document.filterForm.submit();">Fetch</a></span>
 			</form>
 		</div>

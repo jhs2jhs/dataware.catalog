@@ -78,7 +78,7 @@
 		};
 
 		options[ "page" ] = "enable";
-		options[ "pageSize" ] = 20;
+		options[ "pageSize" ] = 25;
 		options[ "pagingSymbols" ] = { prev: 'prev', next: 'next' };
 		options[ "pagingButtonsConfiguration" ] = "auto";      
 		options[ "cssClassNames" ] = cssClassNames;
@@ -115,7 +115,7 @@
 </head>
 
 <body style="font-family: georgia; font-size:12px;">
-<div style="margin: auto; height:768px; border:1px dotted gray; width:1020px; text-align:middle;">
+<div style="margin: auto; height:768px; width:1020px; text-align:middle;">
 	<div style="float:left; width:800px;">
 		<div style="font-size:12px; margin-bottom:10px;">
 			<div style="margin-top:15px; float:right; font-size:11px; vertical-align:bottom">
@@ -125,7 +125,7 @@
 				<span >Number rows/page:</span>
 				<select style="font-size: 12px;" onchange="setPagination( this.value )">
 					<option value="10">10</option>
-					<option selected="selected" value="20">20</option>
+					<option selected="selected" value="25">25</option>
 					<option value="50">50</option>
 					<option value="100">100</option>
 					<option value="">all</option>
