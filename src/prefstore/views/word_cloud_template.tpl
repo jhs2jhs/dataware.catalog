@@ -1,11 +1,16 @@
+<!-- HEADER ------------------------------------------------------------------>
 %include header
 
+<!---------------------------------------------------------------- 
+	PAGE SCRIPTS
+------------------------------------------------------------------>
 <script type="text/javascript"> 
 	
-	
+	//-- create a word list from the different data categories
 	var word_list = {{data}};
 	var selected_term_list = new Array();
 	
+	//-- when the page is ready draw the word cloud
 	$( document ).ready( function() {
 		$( "#wordcloud" ).jQCloud(
 			word_list[ "relevance" ],
@@ -13,6 +18,11 @@
 		)
 	});
 	
+	
+	/**
+	 * function that will get called when a row is selected,
+	 * which adds the chosen term to the selection box
+	 */
 	function select( selection ) {
 		
 		index = selected_term_list.indexOf( selection );
@@ -29,8 +39,14 @@
 		$("#selectedList").html( str ); 
 	}
 
+
+	/**
+	 * function that will reorder the wordcloud and the size of 
+	 * its terms based on the category chosen.
+	 */
 	function visualize_by( type ) {
 
+		//-- enable or disable the category choice links
 		$( "#organized_by" ).children().each( 
 			function() {
 				str = $( this ).html()
@@ -41,26 +57,34 @@
 			}	
 		);
 
+		//-- redraw the word cloud itself
 		$( "#wordcloud" ).html("");
 		$( "#wordcloud" ).jQCloud(
 				word_list[ type ],
 				{ width: 800, height: 600 }
 		)
-
 	}
 
 </script>
 
-
-
+<!---------------------------------------------------------------- 
+	HEADER SECTION
+------------------------------------------------------------------>
 <div class="sub_header">
-	<div class="page-name">ANALYSIS</div>
-	<div class="page-description">A TABULAR BREAKDOWN OF YOUR PREFSTORE MODEL</div>
+	<div class="page-name">VISUALIZE</div>
+	<div class="page-description">A WORDCLOUR REPRESENTATION OF YOUR PREFSTORE MODEL</div>
 </div>
 
 
+<!---------------------------------------------------------------- 
+	CONTENT SECTION
+------------------------------------------------------------------>
 <div class="main">
-	<div style="float:left; width:800px; border">
+
+	<!---------------------------------------------------------------- 
+		THE WORD CLOUD 
+	------------------------------------------------------------------>
+	<div style="float:left; width:800px;">
 		<div style="text-align:right; margin-top:15px; margin-bottom:5px; font-size:11px; vertical-align:bottom">
 			{{message}}
 		</div>
@@ -83,14 +107,19 @@
 		</div>
 	</div>
 
-
+	<!---------------------------------------------------------------- 
+		FILTER BOXES
+	------------------------------------------------------------------>
 	<div style="text-align:center; margin:34 0 0 20; float:left; border:1px solid #fafafa; width:175px;">
+
+		<!-- SELECTED TERMS -------------------------------------------------------------->
 		<div style="padding-top: 5px; height:23px; font-weight:bold; border:1px solid #dadada;"> 
 			Selected Terms:
 		</div>
 		<div id="selectedList" style="min-height:50px; border:1px solid #eaeaea; background-color: #fafafa; padding:5px; font-size:11px;"> 
 		</div>
 		
+		<!-- FILTER BOX ------------------------------------------------------------------>
 		<div style="margin-top:15px; padding-top: 5px; height:23px; font-weight:bold; border:1px solid #dadada;"> 
 			Fetch top 50 terms:
 		</div>
@@ -133,6 +162,7 @@
 			</form>
 		</div>
 
+		<!-- LARGEST WORD BOX------------------------------------------------------------->
 		<div style="margin-top:15px; padding-top: 5px; height:23px; font-weight:bold; border:1px solid #dadada;"> 
 			Largest Word is...
 		</div>
@@ -144,4 +174,6 @@
 		</div>
 	</div>
 </div>
+
+<!-- FOOTER ------------------------------------------------------------------>
 %include footer

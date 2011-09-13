@@ -58,15 +58,15 @@ body {
 .sub_header {
 	border-bottom:1px solid #dadada;
 	height: 50px;
-	padding: 20 0 5 0;
-	font-family: arial;
+	font-family: georgia;
 	vertical-align: middle;
 }
 
 .page-name {
+	margin-top:12px;
 	font-weight: bold;
 	float: left;
-	font-size:25px;
+	font-size:22px;
 }
 
 .page-name-selected {
@@ -75,7 +75,7 @@ body {
 
 .page-description {
 	float:left;
-	margin-top:10px;
+	margin-top:17px;
 	margin-left: 225px;
 	font-size:13px;
 	color:#999999;
@@ -86,16 +86,21 @@ body {
 }
 
 .main {
+	margin-top:15px;
 	font-family: georgia;
-	min-height:650px;
+	font-size:13px;
+	overflow: auto;
 }
 
 .bottom {
 	min-height:220px;
+	margin-top: 50px;
 }
 
 
-
+/**
+ * Styles for the Word Cloud page
+ **/
 #wordcloud 
 {
 	width: 800px;
@@ -120,29 +125,31 @@ a:hover {
 }
 
 
-
+/**
+ * Styles for the Analysis Page
+ **/
 
 .table-header {
-			font-size: 13px;
-			font-weight:bold;
-			background-image:url("./static/titleBack.png");
-		}
+	font-size: 13px;
+	font-weight:bold;
+	background-image:url("./static/titleBack.png");
+}
 
-		.table-row {
-			font-size: 11px;
-		}
+.table-row {
+	font-size: 11px;
+}
 
-		.table-odd-row {
-			font-size: 11px;
-			background-color: #fafafa;
-		}
+.table-odd-row {
+	font-size: 11px;
+	background-color: #fafafa;
+}
 
-		.table-selected {
-			font-size: 11px;
-			background-color: #ddddff;
-		}
+.table-selected {
+	font-size: 11px;
+	background-color: #ddddff;
+}
 
-		.table-hover {
-			font-size: 11px;
-			background-color: #eeeeff;
-		}
+.table-hover {
+	font-size: 11px;
+	background-color: #eeeeff;
+}
