@@ -72,7 +72,7 @@
 ------------------------------------------------------------------>
 <div class="sub_header">
 	<div class="page-name">VISUALIZE</div>
-	<div class="page-description">A WORDCLOUR REPRESENTATION OF YOUR PREFSTORE MODEL</div>
+	<div class="page-description">A WORDCLOUD REPRESENTATION OF YOUR PREFSTORE MODEL</div>
 </div>
 
 
