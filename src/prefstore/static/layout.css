@@ -19,12 +19,21 @@ body {
 }
 
 .logo {
+	margin-top:5px;
 	float: left;
-	padding: 20 0 25 0;
 	font-family: georgia;
 	font-size: 35px;
 	font-weight:bold;
 }
+
+.prefstore {
+	margin-top:8px;
+	float: left;
+	font-family: georgia;
+	font-size: 35px;
+	font-weight:bold;
+}
+
 
 .menu_button {
 	float: right;
@@ -57,13 +66,13 @@ body {
 
 .sub_header {
 	border-bottom:1px solid #dadada;
-	height: 50px;
+	height: 60px;
 	font-family: georgia;
 	vertical-align: middle;
 }
 
 .page-name {
-	margin-top:12px;
+	margin-top:18px;
 	font-weight: bold;
 	float: left;
 	font-size:22px;
@@ -75,7 +84,7 @@ body {
 
 .page-description {
 	float:left;
-	margin-top:17px;
+	margin-top:22px;
 	margin-left: 225px;
 	font-size:13px;
 	color:#999999;

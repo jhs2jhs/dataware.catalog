@@ -43,12 +43,13 @@
 <div class="top">
 	<div class="header">
 		<div class="logo">
-			<span style="color:#009cd2";>Pref</span><span style="color:#aaaaaa";>Store</span>
+			<img src="./static/dwlogofull.png"/>
 		</div>
 		<div id="login" class="menu_button">
 			<span class="top-menu-item">LOGIN</span>
 			<span class="menu-description">startup here</span></a> 
 		</div>
+
 		<div id="audit" class="menu_button">
 			<span class="top-menu-item">AUDIT</span>
 			<span class="menu-description">interactions</span></a> 

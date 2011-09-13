@@ -1,5 +1,5 @@
 body {
-  width: 350px;
+  width: 370px;
 }
 
 img {
@@ -20,14 +20,14 @@ form input.text {
 
 .openid_out img {
 	float:left; 
-	width:85px;
+	width:75px;
 	margin:4px;
 	border:1px dotted gray;
 }
 
 .openid_over img {
 	float:left; 
-	width:85px;
+	width:75px;
 	margin:4px;
 	border:1px solid gray;
 }

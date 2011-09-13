@@ -9,6 +9,7 @@
 	DIV_NAMES[ 0 ] = "loggedInBox";
 	DIV_NAMES[ 1 ] = "loggedOutBox";
 	DIV_NAMES[ 2 ] = "registerBox";
+	DIV_NAMES[ 3 ] = "loggedOutMsg";
 	PREFSTORE = window.localStorage.getItem( "prefstore" );
 	COOKIE_NAME = window.localStorage.getItem( "cookie_name" );	
 	
@@ -38,6 +39,7 @@
 		else {
 			chrome.browserAction.setIcon( { path:"icon-dormant.png" } );
 			displayBox( "loggedOutBox", duration );
+			$( '#loggedOutMsg' ).show( duration );
 		}
 		
 		UpdateCurrentPageBox( duration );
@@ -98,7 +100,6 @@
 	 * the state of the model
 	 */ 
 	function displayBox( divToShow, duration ) {
-		console.log( "DISPLAY " + divToShow + " duration=" + duration )
 		for( i = 0; i < DIV_NAMES.length; i++ ) {
 			if ( divToShow == DIV_NAMES[ i ] ) {
 				$( '#' + DIV_NAMES[ i ] ).show( duration );
@@ -143,13 +144,11 @@
 	 */
 	function clearLocalStorage() {
 		if ( confirm( 'Are you sure you want to clear Local Storage? This is not undoable...' ) ) {
-		
 			window.localStorage.setItem( "pagesAnalysed" ) = 0;
 			window.localStorage.setItem( "pagesSent" ) = 0;
 			window.localStorage.setItem( "pagesComplete" ) = 0;
 			window.localStorage.setItem( "lastPage" ) = "{}";  
 			window.localStorage.setItem( "lastPageStatus" ) = "";
-			
 			refresh( 300 );
 		}
 	}
@@ -159,14 +158,14 @@
 </head>
 
 <body onLoad="javascript:refresh()">
-<div>
-	<div style="float:left; margin-top:-5px;"> 
-		<img src="images/logo.png" style="border:0px; width:100px;"/>
+<div style="font-family:georgia; font-size:12px;">
+	<div style="float:left; margin:-5 10 0 0; width:190px; text-align:right;"> 
+		<img src="images/dwlogofull.png" style="border:1px; width:98%;"/>
+		<span id="loggedOutMsg">Please login using one of:</span>
 	</div>
 
-	<div id="loggedOutBox" class="displayBox">
-		&nbsp;Login to your account via either:<br/>
-		<a id="google" class="openid_out" href="javascript:login('google')" style="border:1px solid red">	
+	<div id="loggedOutBox" style="float:left; width:170px; margin-top:5px;" >
+		<a id="google" class="openid_out" href="javascript:login('google')">	
 			<img 
 				onmouseover="google.className='openid_over'"
 				onmouseout="google.className='openid_out'"
@@ -196,12 +195,10 @@
 		</a>
 	</div>
 
-	<div id="loggedInBox" class="displayBox" style="height:80px">
-		<div style="margin-top:0px; text-align:right;">
-			<a href="javascript:logout()">logout</a>
-		</div>
-		<div style="font-family:Georgia; font-size:17px; margin-left: -2px; margin-top:-3px; color: #444444;">Username:</div>
-		<div id="screen_name" style="font-family:Georgia; font-size:13px; color: #444444;"></div>
+	<div id="loggedInBox" class="displayBox" style="height:65px; text-align:right; width:230px">
+		<div style="font-size:19px; color: #444444; margin-bottom:-2px;">Username:</div>
+		<div id="screen_name" style="font-family:Georgia; font-size:14px; color: #444444;"></div>
+		<div style="margin-top:0px;"><a href="javascript:logout()">logout</a></div>
 	</div>
 
 	<div id="registerBox" class="displayBox">
@@ -209,7 +206,6 @@
 		you still need to register a prefstore account.
 		Please do so <a href="javascript:register()">here</a>.
 	</div>
-
 	<div class="currentPageDisplayBox" id="currentPageBox">
 		<div class="day">User Stats:</div>
 		<div id="pagesAnalysed" class="entry"></div>
