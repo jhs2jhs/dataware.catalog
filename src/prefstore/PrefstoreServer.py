@@ -712,15 +712,15 @@ def analysis():
                     term, 
                     total_appearances,str( total_appearances ), 
                     doc_appearances, str( doc_appearances ),
-                    frequency, '%.5f%%' % round( frequency * 100, 5 ),  
-                    importance, 'unknown' if ( importance == 0 ) else '%.5f%%' % round( importance * 100, 5 ),
-                    relevance, 'unknown' if ( relevance == 0 ) else '%.4f' % round( relevance * 100, 4 ),
-                    last_seen, time.strftime( "%d %b %Y %H:%M", time.gmtime( last_seen ) )
+                    frequency * 10000000, '%.5f%%' % round( frequency * 100, 5 ),  
+                    importance * 10000000, 'unknown' if ( importance == 0 ) else '%.5f%%' % round( importance * 100, 5 ),
+                    relevance * 10000000, 'unknown' if ( relevance == 0 ) else '%.4f' % round( relevance * 100, 4 ),
+                    last_seen , time.strftime( "%d %b %Y %H:%M", time.gmtime( last_seen ) )
                 )
                 
                 
         return template(     
-            'data_management_template',
+            'analysis_page_template',
              data=data,
              type=type,
              search_term=search_term,
@@ -857,7 +857,7 @@ def home():
 @route('/settings')
 def settings():
     return template(     
-        'home_page_template'
+        'settings_page_template'
     );
     
    
@@ -867,7 +867,7 @@ def settings():
 @route('/audit')
 def audit():
     return template(     
-        'home_page_template'
+        'audit_page_template'
     );
     
             
