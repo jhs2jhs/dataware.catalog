@@ -13,7 +13,8 @@ from bottle import * #@UnusedWildImport
 from WebCountUpdater import * #@UnusedWildImport
 import MySQLdb
 import validictory
-
+import StringIO
+import zlib
 
 #//////////////////////////////////////////////////////////
 # CONSTANTS
@@ -103,21 +104,24 @@ def revoke_request():
 def openIDlogin():
 
     try: 
-        username = request.GET[ 'username' ]
+        username = request.GET[ 'username' ]    
     except: 
         username = None
-    
-    try: 
+     
+    try:      
         provider = request.GET[ 'provider' ]
     except: 
-        return error( "provider must be supplied" )
+        return template( 'login_page_template', user=None )
     
-    url = OpenIDManager.process(
-        realm=REALM,
-        return_to=REALM + "/checkauth",
-        provider=provider,
-        username=username
-    )
+    try:
+        url = OpenIDManager.process(
+            realm=REALM,
+            return_to=REALM + "/checkauth",
+            provider=provider,
+            username=username
+        )
+    except Exception, e:
+        return error( e )
     
     redirect( url )
 
@@ -149,18 +153,8 @@ def authenticate():
                 else :
                     screen_name = user[ "screen_name" ]
                 
-                #if they have no "screen_name" it means that they
-                #haven't registered an account yet    
-                if ( not screen_name ):
-                    json = '{"user_id":"%s","screen_name":null}' \
-                        % ( user_id, )
-                    
-                else:
-                    json = '{"user_id":"%s","screen_name":"%s"}' \
-                        % ( user_id, user[ "screen_name" ] )
-                     
-                response.set_cookie( EXTENSION_COOKIE, json )
-            
+                set_authentication_cookie( user_id, screen_name  )
+                
             except Exception, e:
                 return error( e )
             
@@ -174,8 +168,8 @@ def authenticate():
         delete_authentication_cookie()
         
     redirect( ROOT_PAGE )
-
-    
+       
+                
 #///////////////////////////////////////////////
 
 
@@ -196,6 +190,23 @@ def delete_authentication_cookie():
         expires=0
     )
             
+#///////////////////////////////////////////////
+
+
+def set_authentication_cookie( user_id, screen_name = None ):
+    
+    #if the user has no "screen_name" it means that they
+    #haven't registered an account yet    
+    if ( not screen_name ):
+        json = '{"user_id":"%s","screen_name":null}' \
+            % ( user_id, )
+        
+    else:
+        json = '{"user_id":"%s","screen_name":"%s"}' \
+            % ( user_id, screen_name )
+         
+    response.set_cookie( EXTENSION_COOKIE, json )
+                            
 
 #//////////////////////////////////////////////////////////
 # PREFSTORE SPECIFIC WEB-API CALLS
@@ -215,29 +226,6 @@ class RegisterException ( Exception ):
     pass
 
     
-#///////////////////////////////////////////////   
-    
-
-@route( '/', method = "GET" )
-def web_main( ):
-    
-    try:
-        user = check_login()
-        if ( user ):
-            return "Welcome to the prefstore, user: %s" % ( user, )
-        else:
-            return "Welcome to the prefstore. Please login."
-    
-    except RegisterException, e:
-        redirect( "/register" )
-        
-    except LoginException, e:
-        return error( e.msg )
-    
-    except Exception, e:
-        return error( e )
-        
-
 #///////////////////////////////////////////////
 
 
@@ -249,7 +237,7 @@ def valid_email( str ):
 
 
 def valid_name( str ):
-    return  re.search( "^[A-Za-z0-9 ']{3,64}$", str )
+    return re.search( "^[A-Za-z0-9 ']{3,64}$", str )
 
 
 #///////////////////////////////////////////////
@@ -259,7 +247,6 @@ def valid_name( str ):
 def register():
     
     #TODO: first check the user is logged in!
-    
     try:
         user_id = extract_user_id()
     except LoginException, e:
@@ -306,28 +293,25 @@ def register():
             except Exception, e:
                 return error( e )
 
+            #update the cookie with the new details
+            set_authentication_cookie( user_id, screen_name )
+            
+            #return the user to the home page
             redirect( ROOT_PAGE )
+    
+    else:
+        email = ""
+        screen_name = ""
+        
+    #if this is the first visit to the page, or there are errors
 
-    #if this is the first visit to the page, or there are errors 
-    return  """
-        <div id="registerBox" class="displayBox">
-        <form action="%s/register" method="GET" >
-            <div class="left">Screen Name</div>
-            <div class="right" >
-                <input id="jid" class="text" name="screen_name" type="text" />
-            </div>
-            <div class="left">Email</div>
-            <div class="right">
-                <input id="email" class="text" name="email" type="text" />
-            </div>
-            <div id="loginMessage" class="loginMessage"></div>
-            <input type="hidden" name="submission" value="True" />
-            <input type="submit" value="Register" />
-                </div>
-            </form>
-        </div>
-    """ % ( REALM, )
-
+    return template( 
+        'register_page_template', 
+        user=None, 
+        email=email,
+        screen_name=screen_name,
+        errors=errors ) 
+    
 
 #///////////////////////////////////////////////
 
@@ -722,6 +706,7 @@ def analysis():
         return template(     
             'analysis_page_template',
              data=data,
+             user=user,             
              type=type,
              search_term=search_term,
              match_type=match_type,
@@ -735,8 +720,8 @@ def analysis():
   
   
 #///////////////////////////////////////////////  
-
-   
+        
+    
 @route('/visualize')
 def word_cloud():
     
@@ -776,7 +761,6 @@ def word_cloud():
         data_str = "{'text':'%s', weight:%d, url:'javascript:select(\"%s\")'},"
         total_appearance_data = ""
         doc_appearance_data = ""
-        frequency_data = ""
         web_importance_data = ""        
         relevance_data = ""
         
@@ -792,9 +776,6 @@ def word_cloud():
                 
                 #the number of documents the term has been seen in
                 doc_appearances = row[ 'doc_appearances' ]
-                
-                #the unix timestamp of when the term was last seen
-                last_seen = row[ 'last_seen' ]
                 
                 #the term frequency in the users model (tf)
                 frequency = total_appearances / user [ "total_term_appearances" ]
@@ -816,7 +797,6 @@ def word_cloud():
                 web_importance_data +=  data_str % ( term, importance  * 10000, term )
                 relevance_data +=  data_str % ( term, relevance * 10000, term )
                 
-        
         data =""" {
             'total appearances':[ %s ],
             'doc appearances':[ %s ],
@@ -831,6 +811,7 @@ def word_cloud():
        
         return template(     
             'word_cloud_template',
+             user=user,
              data=data,
              order_by=order_by, 
              message=message,
@@ -844,21 +825,37 @@ def word_cloud():
 #///////////////////////////////////////////////  
     
     
-@route('/home')
-def home():
-    return template(     
-        'home_page_template'
-    );      
-  
+@route( '/', method = "GET" )     
+@route( '/home', method = "GET" )
+def home( ):
+
+    try:
+        user = check_login()
+        return template( 'home_page_template', user=user );
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return error( e.msg )
+    except Exception, e:
+        return error( e )  
   
 #///////////////////////////////////////////////  
     
     
-@route('/settings')
-def settings():
-    return template(     
-        'settings_page_template'
-    );
+@route('/summary')
+def summary():
+  
+    try:
+        user = check_login()
+        user["registered_str"] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "registered" ] ) )
+        user["last_distill_str"] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "last_distill" ] ) )
+        return template( 'settings_page_template', user=user );
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return error( e.msg )
+    except Exception, e:
+        return error( e )     
     
    
 #///////////////////////////////////////////////  
@@ -866,9 +863,18 @@ def settings():
     
 @route('/audit')
 def audit():
-    return template(     
-        'audit_page_template'
-    );
+    
+    try:
+        user = check_login()
+        return template( 'audit_page_template', user=user );
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return error( e.msg )
+    except Exception, e:
+        return error( e )  
+     
+
     
             
 #//////////////////////////////////////////////////////////
