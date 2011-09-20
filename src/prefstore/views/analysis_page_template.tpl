@@ -1,5 +1,5 @@
 <!-- HEADER ------------------------------------------------------------------>
-%include header
+%include header user=user
 
 <!---------------------------------------------------------------- 
 	PAGE SCRIPTS
@@ -95,7 +95,7 @@
 
 <div class="sub_header">
 	<div class="page-name">ANALYSIS</div>
-	<div class="page-description">A TABULAR BREAKDOWN OF YOUR PREFSTORE MODEL</div>
+	<div class="page-description">A TABULAR BREAKDOWN OF THE PREFSTORE FOR : {{user[ "screen_name" ]}}</div>
 </div>
 
 
