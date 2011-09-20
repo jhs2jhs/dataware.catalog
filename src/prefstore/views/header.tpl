@@ -39,16 +39,22 @@
 
 
 <body>
-<div id="log"></div>
 <div class="top">
 	<div class="header">
 		<div class="logo">
 			<img src="./static/dwlogofull.png"/>
 		</div>
+		
+		%if user:
+		<div id="logout" class="menu_button">
+			<span class="top-menu-item">LOGOUT</span>
+		</div>
+		%else:
 		<div id="login" class="menu_button">
 			<span class="top-menu-item">LOGIN</span>
 			<span class="menu-description">startup here</span></a> 
 		</div>
+		%end
 
 		<div id="audit" class="menu_button">
 			<span class="top-menu-item">AUDIT</span>
@@ -62,8 +68,8 @@
 			<span class="top-menu-item">ANALYSIS</span>
 			<span class="menu-description">your model</span></a> 
 		</div>
-		<div id="settings" class="menu_button">
-			<span class="top-menu-item">SETTINGS</span>
+		<div id="summary" class="menu_button">
+			<span class="top-menu-item">SUMMARY</span>
 			<span class="menu-description">your details</span></a> 
 		</div>
 		<div id="home" class="menu_button">
