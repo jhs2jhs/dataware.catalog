@@ -162,3 +162,21 @@ a:hover {
 	font-size: 11px;
 	background-color: #eeeeff;
 }
+
+.openid_out img {
+	width:105px;
+	margin:3px;
+	border:1px dotted gray;
+}
+
+.openid_over img {
+	width:105px;
+	margin:3px;
+	border:1px solid gray;
+}
+
+.loginMessage {
+	font-family:arial;
+	color:#ff5555;
+	font-size:11px
+}
