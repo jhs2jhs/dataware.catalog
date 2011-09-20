@@ -69,12 +69,13 @@ class PrefstoreDB( object ):
             last_distill int(10) unsigned NOT NULL,
             last_message int(10) unsigned NOT NULL,
             total_term_appearances bigint(20) NOT NULL DEFAULT 0,
+            registered int(10) unsigned,            
             PRIMARY KEY (user_id) )
             ENGINE=InnoDB DEFAULT CHARSET=latin1;
         """  % ( DB_NAME, TBL_USER_DETAILS ),   
     } 
     
-
+    
     #///////////////////////////////////////
     
     
@@ -197,8 +198,8 @@ class PrefstoreDB( object ):
             
             query = """
                 INSERT INTO %s.%s 
-                ( user_id, screen_name, email, total_documents, last_distill, last_message, total_term_appearances ) 
-                VALUES ( %s, null, null, 0, 0, 0, 0 )
+                ( user_id, screen_name, email, total_documents, last_distill, last_message, total_term_appearances, registered ) 
+                VALUES ( %s, null, null, 0, 0, 0, 0, null )
             """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s' ) 
 
             self.cursor.execute( query, ( user_id ) )
@@ -225,10 +226,12 @@ class PrefstoreDB( object ):
             );
             
             query = """
-                UPDATE %s.%s SET screen_name = %s, email = %s WHERE user_id = %s
-            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s', '%s' ) 
+                UPDATE %s.%s 
+                SET screen_name = %s, email = %s, registered= %s 
+                WHERE user_id = %s
+            """  % ( self.DB_NAME, self.TBL_USER_DETAILS, '%s', '%s', '%s', '%s' ) 
 
-            self.cursor.execute( query, ( screen_name, email, user_id ) )
+            self.cursor.execute( query, ( screen_name, email, time(), user_id ) )
             return True;
         
         else:
