@@ -1,5 +1,5 @@
 <!-- HEADER ------------------------------------------------------------------>
-%include header
+%include header user=user
 
 <!---------------------------------------------------------------- 
 	PAGE SCRIPTS
@@ -72,7 +72,7 @@
 ------------------------------------------------------------------>
 <div class="sub_header">
 	<div class="page-name">VISUALIZE</div>
-	<div class="page-description">A WORDCLOUD REPRESENTATION OF YOUR PREFSTORE MODEL</div>
+	<div class="page-description">A WORDCLOUD REPRESENTATION FOR : {{user[ "screen_name" ]}}</div>
 </div>
 
 
