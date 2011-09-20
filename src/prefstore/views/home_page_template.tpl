@@ -1,5 +1,5 @@
 <!-- HEADER ------------------------------------------------------------------>
-%include header
+%include header user=user
 
 <!---------------------------------------------------------------- 
 	PAGE SCRIPTS
@@ -14,7 +14,9 @@
 
 <div class="sub_header">
 	<div class="page-name">HOME</div>
-	<div class="page-description">WELCOME TO THE PREFSTORE. REPRESENTING YOUR INTERESTS!</div>
+	<div class="page-description">
+		WELCOME TO THE PREFSTORE - LITERALLY REPRESENTING YOUR INTERESTS!
+	</div>
 </div>
 
 
