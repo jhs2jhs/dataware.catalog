@@ -690,6 +690,8 @@ def analysis():
                     importance = row[ 'count' ] / TOTAL_WEB_DOCUMENTS
                     relevance = ( frequency * ( 1 / importance ) )
                   
+                #note below that multiplying by a million serves only to eliminate
+                #rounding error that made everything zero.
                 data += """
                     {c:[{v:'%s'},{v:%d,f:%s},{v:%d,f:%s},{v:%d,f:'%s'},{v:%d,f:'%s'},{v:%d,f:'%s'},{v:%d,f:'%s'}]},
                 """ % ( 
@@ -734,9 +736,9 @@ def word_cloud():
     except Exception, e:
         return error( e )        
         
-    #if the user doesn't exist or is not logged in, send them home
-    if ( not user ) :
-        redirect( ROOT_PAGE )
+    #if the user doesn't exist or is not logged in,
+    #then send them home. naughty user.
+    if ( not user ) : redirect( ROOT_PAGE )
     
     try:
 
@@ -763,6 +765,7 @@ def word_cloud():
         doc_appearance_data = ""
         web_importance_data = ""        
         relevance_data = ""
+     
         
         #TODO: Should also add ability to blacklist terms at some point
         if results:
@@ -790,13 +793,40 @@ def word_cloud():
                 if ( row[ 'count' ] > 0 ) :
                     importance = row[ 'count' ] / TOTAL_WEB_DOCUMENTS
                     relevance = ( frequency * ( 1 / importance ) )
-
-
+                
                 total_appearance_data +=  data_str % ( term, total_appearances, term )
                 doc_appearance_data +=  data_str % ( term, doc_appearances, term )
                 web_importance_data +=  data_str % ( term, importance  * 10000, term )
                 relevance_data +=  data_str % ( term, relevance * 10000, term )
-                
+               
+                #below is some code for image representations of your interests
+                #Very neato ;)
+                """
+                    BING_KEY = "580DDBFFD1A4581F90038B9D5B80BA065FEFE4E7"
+                    WEB_PROXY = 'http://mainproxy.nottingham.ac.uk:8080'    
+                    search = WebSearch( proxy=WEB_PROXY, bing_key=BING_KEY )
+                    urls = []
+                    image_count = 0
+        
+                    if ( image_count < 10 ):
+                    urls.append(
+                        ( term, search.getBingImage( term ) )
+                    )
+                    image_count += 1
+                    
+                    <!-- code for image version of the cloud
+                    <img class="term_image" src="{{ urls[ 0 ][ 1 ] }}" title="{{ urls[ 0 ][ 0 ] }}" >
+                    <img class="term_image" src="{{ urls[ 1 ][ 1 ] }}" title="{{ urls[ 1 ][ 0 ] }}" >
+                    <img class="term_image" src="{{ urls[ 2 ][ 1 ] }}" title="{{ urls[ 2 ][ 0 ] }}" ><br/>
+                    <img class="term_image" src="{{ urls[ 3 ][ 1 ] }}" title="{{ urls[ 3 ][ 0 ] }}" >
+                    <img class="term_image" src="{{ urls[ 4 ][ 1 ] }}" title="{{ urls[ 4 ][ 0 ] }}" >
+                    <img class="term_image" src="{{ urls[ 5 ][ 1 ] }}" title="{{ urls[ 5 ][ 0 ] }}" ><br/>
+                    <img class="term_image" src="{{ urls[ 6 ][ 1 ] }}" title="{{ urls[ 6 ][ 0 ] }}" >
+                    <img class="term_image" src="{{ urls[ 7 ][ 1 ] }}" title="{{ urls[ 7 ][ 0 ] }}" >
+                    <img class="term_image" src="{{ urls[ 8 ][ 1 ] }}" title="{{ urls[ 8 ][ 0 ] }}" >
+                    -->
+                """ 
+       
         data =""" {
             'total appearances':[ %s ],
             'doc appearances':[ %s ],
@@ -808,14 +838,13 @@ def word_cloud():
             web_importance_data[:-1],
             relevance_data[:-1],               
         )    
-       
+    
         return template(     
             'word_cloud_template',
              user=user,
              data=data,
              order_by=order_by, 
-             message=message,
-             match_type="hello"
+             message=message
         )
   
     except Exception, e:
@@ -847,9 +876,13 @@ def summary():
   
     try:
         user = check_login()
-        user["registered_str"] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "registered" ] ) )
-        user["last_distill_str"] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "last_distill" ] ) )
-        return template( 'settings_page_template', user=user );
+        user[ "registered_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "registered" ] ) )
+        user[ "last_distill_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "last_distill" ] ) )
+        user[ "average_appearances" ] = round( user[ "total_term_appearances" ] / user[ "total_documents" ], 3) 
+        summary = prefdb.fetch_user_summary( user[ "user_id" ] )
+
+        return template( 'summary_page_template', user=user, summary=summary );
+    
     except RegisterException, e:
         redirect( "/register" ) 
     except LoginException, e:
@@ -874,8 +907,6 @@ def audit():
     except Exception, e:
         return error( e )  
      
-
-    
             
 #//////////////////////////////////////////////////////////
 # MAIN FUNCTION
