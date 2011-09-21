@@ -175,5 +175,14 @@
 	</div>
 </div>
 
+<style>
+.term_image {
+	width:100px;
+	height:100px;
+	border:1px dotted gray;
+}
+</style>
+
+
 <!-- FOOTER ------------------------------------------------------------------>
 %include footer
