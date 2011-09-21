@@ -18,6 +18,9 @@ class PrefstoreDB( object ):
     TBL_TERM_DICTIONARY = 'tblTermDictionary'
     TBL_TERM_BLACKLIST = 'tblTermBlacklist'
     TBL_USER_DETAILS = 'tblUserDetails'
+    
+    VIEW_TERM_SUMMARIES = 'viewTermSummaries'    
+    
     CONFIG_FILE = "prefstore.cfg"
     SECTION_NAME = "PrefstoreDB"
 
@@ -73,6 +76,23 @@ class PrefstoreDB( object ):
             PRIMARY KEY (user_id) )
             ENGINE=InnoDB DEFAULT CHARSET=latin1;
         """  % ( DB_NAME, TBL_USER_DETAILS ),   
+        
+        VIEW_TERM_SUMMARIES : """
+            CREATE VIEW %s.%s AS
+            SELECT
+              user_id,
+              MIN( last_seen ) min_last_seen,
+              MAX( last_seen ) max_last_seen,
+              MAX( total_appearances ) max_apperances,
+              MIN( total_appearances ) min_apperances,
+              MAX( doc_appearances ) max_documents,
+              MIN( doc_appearances ) min_documents,
+              COUNT( term ) unique_terms,
+              SUM( total_appearances ) total_term_appearances,
+              SUM( doc_appearances ) total_documents              
+            FROM prefstore.tblTermAppearances
+            GROUP BY user_id
+        """  % ( DB_NAME, VIEW_TERM_SUMMARIES ),          
     } 
     
     
@@ -161,7 +181,9 @@ class PrefstoreDB( object ):
             self.create_table( self.TBL_TERM_BLACKLIST )                      
         if not self.TBL_TERM_APPEARANCES in tables : 
             self.create_table( self.TBL_TERM_APPEARANCES )
-     
+        if not self.VIEW_TERM_SUMMARIES in tables : 
+            self.create_table( self.VIEW_TERM_SUMMARIES )
+            
         self.commit();
         
         
@@ -281,7 +303,28 @@ class PrefstoreDB( object ):
         else :
             return None     
         
+
+    #///////////////////////////////////////
+
+
+    def fetch_user_summary( self, user_id ) :
+
+        if user_id :
+            query = """
+                SELECT * FROM %s.%s t where user_id = %s 
+            """  % ( self.DB_NAME, self.VIEW_TERM_SUMMARIES, '%s' ) 
         
+            self.cursor.execute( query, ( user_id, ) )
+            row = self.cursor.fetchone()
+            if not row is None:
+                return row
+            else :
+                return None
+        else :
+            return None     
+            
+            
+                    
     #///////////////////////////////////////
                     
                     
@@ -598,7 +641,7 @@ class PrefstoreDB( object ):
         order_by='total appearances',
         direction='DESC',
         LIMIT=1000,
-        MIN_WEB_PREVALENCE=10000,
+        MIN_WEB_PREVALENCE=50000,
         TOTAL_WEB_DOCUMENTS=25000000000
     ) :
         FIELDS = { 
