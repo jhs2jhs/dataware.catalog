@@ -107,3 +107,39 @@ class WebSearch( object ):
             return None
 
 
+    #///////////////////////////////////////////////
+
+
+    def getBingImage( self, term ):
+
+        # Retrieve hits from bing for this query term
+        result = urllib.urlopen(
+            "http://api.search.live.net/json.aspx?Appid=%s&query=%s&sources=Image&Image.Count=1&Image.Offset=0&Adult=Moderate&Image.Filters=Aspect:square" % 
+            ( self._BING_KEY, term ), 
+            proxies=self._PROXY )    
+        
+        # Collate the result
+        output = "";
+        for line in result.readlines() : 
+            output += line;
+    
+        # ...and turn it into json
+        jsonOutput = json.loads( output ).get( 'SearchResponse' )
+    
+        # do some error checking
+        errors = jsonOutput.get( 'Errors' ) 
+        if not errors is None:
+            for e in errors :
+                logging.error( "Error %d from Bing: %s" %
+                    ( e.get( 'Code' ), e.get('Message') ) )  
+            raise
+        
+        # and finally extract the image result
+        try:
+            image_url = jsonOutput.get( "Image" ) \
+                .get( "Results" )[0] \
+                .get( "Thumbnail" ) \
+                .get( "Url" );
+            return image_url
+        except:
+            return None
