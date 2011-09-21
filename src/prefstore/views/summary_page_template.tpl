@@ -20,49 +20,6 @@
 <!---------------------------------------------------------------- 
 	CONTENT SECTION
 ------------------------------------------------------------------>
-<style>
-
-.table_category {
-	border-bottom: 1px dotted #aaaaaa; 
-	margin-bottom:25px;
-	padding:5px;
-}
-
-.table_item {
-	height:32px;
-	display: block;
-	vertical-align: middle;
-}
-
-.table_field_name {
-	float:left;
-	font-size:16; 
-	font-weight:bold; 
-	color:#009cd2;
-}
-
-.table_field_value {
-	float:left;
-	font-size:13; 
-	font-weight:normal; 
-	color:#555555; 
-	padding: 2 4 4 10;
-	max-width:180px;
-}
-
-.table_image {
-	float:left;
-}
-
-.table_image img {
-	width:50px;
-}
-
-.table_content {
-	margin-left:75px
-}
-
-</style>
 <div class="main">
 
 	<div style="margin:15px auto; font-family:georgia; padding:15px; border:0px dotted #cccccc; width:400px;">
