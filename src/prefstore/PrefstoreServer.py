@@ -876,19 +876,24 @@ def summary():
   
     try:
         user = check_login()
-        user[ "registered_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "registered" ] ) )
-        user[ "last_distill_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "last_distill" ] ) )
-        user[ "average_appearances" ] = round( user[ "total_term_appearances" ] / user[ "total_documents" ], 3) 
-        summary = prefdb.fetch_user_summary( user[ "user_id" ] )
-
-        return template( 'summary_page_template', user=user, summary=summary );
-    
     except RegisterException, e:
         redirect( "/register" ) 
     except LoginException, e:
         return error( e.msg )
     except Exception, e:
         return error( e )     
+    
+    #if the user doesn't exist or is not logged in,
+    #then send them home. naughty user.
+    if ( not user ) : redirect( ROOT_PAGE )
+
+    user[ "registered_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "registered" ] ) )
+    user[ "last_distill_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "last_distill" ] ) )
+    user[ "average_appearances" ] = round( user[ "total_term_appearances" ] / user[ "total_documents" ], 3) 
+    summary = prefdb.fetch_user_summary( user[ "user_id" ] )
+
+    return template( 'summary_page_template', user=user, summary=summary );
+    
     
    
 #///////////////////////////////////////////////  
@@ -906,7 +911,10 @@ def audit():
         return error( e.msg )
     except Exception, e:
         return error( e )  
-     
+    
+    #if the user doesn't exist or is not logged in,
+    #then send them home. naughty user.
+    if ( not user ) : redirect( ROOT_PAGE ) 
             
 #//////////////////////////////////////////////////////////
 # MAIN FUNCTION
