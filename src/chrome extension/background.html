@@ -9,11 +9,9 @@
 	 * This is the Controller Script for the Google Chrome Datware.
 	 * It receives requests from the content and popup scripts.
 	 * TODO: Should keep track of web-history, to check that a web page is not being repeatedly read (also solves back button problem)
- 	 * TODO: We should probably ignore search results? Lots of ambiguous stuff there? Maybe take search terms instead?
 	 * TODO: Keep track of IP Address
-	 * TODO: Add bulk inserts 
-	 * TODO: Improve the popup.html so that the info for the current page is visible
 	 */
+
 
 	//-- Setup constants that will be required
 	DOCUMENT_TYPE = "web";
@@ -21,10 +19,12 @@
 	COOKIE_NAME = "logged_in"
 	PREFSTORE =  "http://localhost:8080/";
 	
+	//-- A list of domains that won't be parsed (predominantly search engines)
+	IGNORE_LIST = new Array( "www.bing", "www.google", "search.yahoo", "ask.com", "search.aol" )
+
 	window.localStorage.setItem( "cookie_name", COOKIE_NAME );
 	window.localStorage.setItem( "prefstore", PREFSTORE );
 	//"http://ec2-79-125-74-77.eu-west-1.compute.amazonaws.com:8080/";
-	
 	
 	//-- initialize by parsing the extensions corresponding cookie	
 	parse_cookie()
@@ -91,6 +91,20 @@
 		}
 	}
 	
+
+	/*
+	 *
+	 */
+	function isIgnored( url ) {
+
+		//-- check whether the url contains an ignore_list match.
+		for ( i=0; i < IGNORE_LIST.length; i++ )
+			if ( url.indexOf( IGNORE_LIST[ i ] ) != -1 )
+				return true;
+
+		return false;
+	}
+
 	
     /**
      * Main entry point to the script - contentScript.js essentially 
@@ -108,23 +122,28 @@
 		//-- for the moment we discard it
 		
 		if ( user_id && screen_name )  {
-		
-			//-- parse the text with min_word_length 3, min_support 3
-			doc = new Parser( text, 3, 3 );
-			
-			//-- create the distillation object (default duration to 10s for now)
-			var distillation = new Distillation( doc.fv, url, 10, title, doc.totalWords );
-			
-			//-- store the current page being observed, for the stats dropdown.
-			window.localStorage.setItem( "lastPage", distillation.stringify() );
-			window.localStorage.setItem( "lastPageStatus", null );
-			incrementUserStat( "pagesAnalysed" );
-			
-			//-- transmit to the prefstore
-			chrome.browserAction.setIcon( { path:"icon-progress.png" } );
-			
-			transmitDistillation( distillation );
-			incrementUserStat( "pagesSent" );
+
+			//-- determine whether the page passes the ignore_list
+			if ( !isIgnored( url ) ) 
+			{
+
+				//-- parse the text with min_word_length 3, min_support 3
+				doc = new Parser( text, 3, 3 );
+				
+				//-- create the distillation object (default duration to 10s for now)
+				var distillation = new Distillation( doc.fv, url, 10, title, doc.totalWords );
+				
+				//-- store the current page being observed, for the stats dropdown.
+				window.localStorage.setItem( "lastPage", distillation.stringify() );
+				window.localStorage.setItem( "lastPageStatus", null );
+				incrementUserStat( "pagesAnalysed" );
+				
+				//-- transmit to the prefstore
+				chrome.browserAction.setIcon( { path:"icon-progress.png" } );
+				
+				transmitDistillation( distillation );
+				incrementUserStat( "pagesSent" );
+			}
 		}	
 	}
 	
