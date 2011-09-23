@@ -860,7 +860,6 @@ def home( ):
 
     try:
         user = check_login()
-        return template( 'home_page_template', user=user );
     except RegisterException, e:
         redirect( "/register" ) 
     except LoginException, e:
@@ -868,6 +867,16 @@ def home( ):
     except Exception, e:
         return error( e )  
   
+    if ( not user ):
+        summary = None
+    else:
+        user[ "registered_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "registered" ] ) )
+        user[ "last_distill_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "last_distill" ] ) )
+        user[ "average_appearances" ] = round( user[ "total_term_appearances" ] / user[ "total_documents" ], 2 ) 
+        summary = prefdb.fetch_user_summary( user[ "user_id" ] )
+
+    return template( 'home_page_template', user=user, summary=summary );
+    
 #///////////////////////////////////////////////  
     
     
@@ -889,13 +898,12 @@ def summary():
 
     user[ "registered_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "registered" ] ) )
     user[ "last_distill_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "last_distill" ] ) )
-    user[ "average_appearances" ] = round( user[ "total_term_appearances" ] / user[ "total_documents" ], 3) 
+    user[ "average_appearances" ] = round( user[ "total_term_appearances" ] / user[ "total_documents" ], 2 ) 
     summary = prefdb.fetch_user_summary( user[ "user_id" ] )
 
     return template( 'summary_page_template', user=user, summary=summary );
     
     
-   
 #///////////////////////////////////////////////  
     
     
