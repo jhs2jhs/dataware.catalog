@@ -444,7 +444,7 @@ class PrefstoreDB( object ):
                     "%s %s: Creating new dictionary term '%s' " 
                     % ( self.name, "insertDictionaryTerm", term ) 
                 );
-                
+               
                 query = """
                     INSERT INTO %s.%s ( term, mtime, count, ctime ) 
                     VALUES ( %s, %s, null, null )
@@ -460,6 +460,31 @@ class PrefstoreDB( object ):
                      
         except:
             log.error( "error %s" % sys.exc_info()[0] )
+
+
+    #///////////////////////////////////////   
+    
+    
+    def insertDictionaryTerms( self, terms = None ):
+
+        try:     
+            if terms and len( terms ) > 0:
+                
+                query = """
+                    INSERT INTO %s.%s ( term, mtime, count, ctime ) 
+                    values ( %s, %d, null, null )
+                """ % ( self.DB_NAME, self.TBL_TERM_DICTIONARY, "%s", int( time() ) )
+
+                self.cursor.executemany( query,  [ ( t, ) for t in terms ] )
+            else:
+                log.warning(
+                    "%s %s: Trying to create empty empty list of dictionary terms : ignoring..." 
+                    % ( self.name, "insertDictionaryTerm", terms ) 
+                );
+                
+        except:
+            log.error( "error %s" % sys.exc_info()[0] )
+
 
              
     #///////////////////////////////////////
