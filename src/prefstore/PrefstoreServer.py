@@ -977,8 +977,8 @@ if __name__ == '__main__' :
         
     try:
         debug( True )
-        run( host='0.0.0.0', port=PORT )
-    except Exception, e:
+        run( host='0.0.0.0', port=PORT, quiet=True )
+    except Exception, e:  
         log.error( "Web Server Startup failed: %s" % ( e, ) )
         exit()
         
