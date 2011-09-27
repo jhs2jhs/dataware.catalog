@@ -4,9 +4,9 @@ Created on 12 April 2011
 '''
 
 import MySQLdb
-import logging
 import ConfigParser
 import hashlib
+import logging
 
 class DatawareDB( object ):
     ''' classdocs '''
@@ -45,7 +45,33 @@ class DatawareDB( object ):
         """  % ( DB_NAME, TBL_DATAWARE_QUERIES ),            
     } 
     
+    
+    #///////////////////////////////////////
 
+
+    def __getattribute__( self, name ):
+        """ I have included this __getattribute__ template design pattern 
+        because there are no gaurantees the user has mySQL setup so that 
+        it won't time out. If it has this function remedies it.
+        """
+        
+        attr = object.__getattribute__(self, name)
+        if hasattr( attr, '__call__' ):
+            
+            def safety_func( *args, **kwargs ):
+                try:
+                    return attr( *args, **kwargs );
+                except MySQLdb.Error, e:
+                    self.console_log.error( "%s: db error %s" % ( "datawareDB Safety Call", e.args[ 0 ] ) )
+                    self.reconnect()
+                    return attr( *args, **kwargs );
+                
+            return safety_func
+        
+        else:
+            return attr
+        
+        
     #///////////////////////////////////////
     
     
@@ -63,13 +89,14 @@ class DatawareDB( object ):
         self.dbname = Config.get( self.SECTION_NAME, "dbname" )
         self.connected = False;
 
+        self.console_log = logging.getLogger( "console_log" )
         
     #///////////////////////////////////////
     
 
     def connect( self ):
         
-        logging.info( "%s: connecting to mysql database..." % self.name )
+        self.console_log.info( "%s: connecting to mysql database..." % self.name )
 
         self.conn = MySQLdb.connect( 
             host=self.hostname,
@@ -86,7 +113,7 @@ class DatawareDB( object ):
     
     
     def reconnect( self ):
-        logging.info( "%s: Database reconnection process activated:" % self.name );
+        self.console_log.info( "%s: Database reconnection process activated:" % self.name );
         self.close()
         self.connect()
         
@@ -103,7 +130,7 @@ class DatawareDB( object ):
           
     def close( self ) :
         
-        logging.info( "%s: disconnecting from mysql database..." % self.name );
+        self.console_log.info( "%s: disconnecting from mysql database..." % self.name );
         self.cursor.close();
         self.conn.close()
                      
@@ -113,7 +140,7 @@ class DatawareDB( object ):
         
     def checkTables( self ):
         
-        logging.info( "%s: checking system table integrity..." % self.name );
+        self.console_log.info( "%s: checking system table integrity..." % self.name );
         
         self.cursor.execute ( """
             SELECT table_name
@@ -135,14 +162,14 @@ class DatawareDB( object ):
                
     def createTable( self, tableName ):
         
-        logging.warning( 
+        self.console_log.warning( 
             "%s: missing system table detected: '%s'" 
             % ( self.name, tableName ) 
         );
         
         if tableName in self.createQueries :
             
-            logging.info( 
+            self.console_log.info( 
                 "%s: --- creating system table '%s' " 
                 % ( self.name, tableName )
             );  

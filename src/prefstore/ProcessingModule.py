@@ -13,9 +13,10 @@ import DatawareDB
 import MySQLdb
 import hashlib
 import logging
- 
-    
-#TODO: SAFETY CALLS ANYONE?
+
+#setup logger for this module
+log = logging.getLogger( "console_log" )
+
 #TODO: Still need a logout even when the person hasn't registered (maybe call it cancel?)
 #TODO: how to prevent accidental "google logins". Is this you?, etc.
 #///////////////////////////////////////////////
@@ -314,7 +315,7 @@ class ProcessingModule( object ) :
         try:
             return func();
         except MySQLdb.Error, e:
-            logging.error( "%s: db error %s" % ( "ProcessingModule", e.args[ 0 ] ) )
+            log.error( "%s: db error %s" % ( "ProcessingModule", e.args[ 0 ] ) )
             self.db.reconnect()
             return func();
     

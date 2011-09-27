@@ -74,10 +74,12 @@
 				fvLength = 0;
 				$.each( lastPage.fv, function( key, value ){ 
 					fvLength++;
-					$( '#termlist' ).append( " <span class='blockTerm'><span class='blockNum'>" + value + "</span> " + key + " </span> &nbsp;"  );
+					$( '#termlist' ).append( 
+						"<span class='blockTerm'><span class='blockNum'>" + value + "</span> " + key + " </span> &nbsp;"  
+					);
 				});
 				
-				$( '#pageTitle' ).html( "Page Title: " + lastPage.docName.substring(0, 20) + "..." );
+				$( '#pageTitle' ).html( "Page Title: " + unescape( lastPage.docName.substring( 0, 40 ) ) + "..." );
 				$( '#pageStats' ).html( "Stats: " + lastPage.totalWords + " words / " + fvLength + " terms extracted" );
 				$( '#pageStatus' ).html( "Status: <i>" + lastPageStatus + "</i>" ); 
 			}

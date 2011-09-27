@@ -5,6 +5,7 @@ Created on 12 April 2011
 
 from __future__ import division
 import logging
+import logging.handlers
 import json
 import OpenIDManager
 import ProcessingModule
@@ -15,6 +16,10 @@ import MySQLdb
 import validictory
 import StringIO
 import zlib
+
+#setup logger for this module
+log = logging.getLogger( "console_log" )
+data_log = logging.getLogger( "console_log" )
 
 #//////////////////////////////////////////////////////////
 # CONSTANTS
@@ -36,7 +41,6 @@ def invoke_request():
             access_token, 
             jsonParams 
         )
-
         return result
     
     except Exception, e:
@@ -278,7 +282,7 @@ def register():
             if ( not valid_email( email ) ):
                 errors[ 'email' ] = "The supplied email address is invalid"
             else: 
-                match = prefdb.fetch_user_by_email( email )
+                match = prefdb.fetch_user_by_email( email ) 
                 if ( not match is None ):
                     errors[ 'email' ] = "That email has already been taken"
         except:
@@ -288,7 +292,7 @@ def register():
         #if everything is okay so far, add the data to the database    
         if ( len( errors ) == 0 ):
             try:
-                prefdb.insert_registration( user_id, screen_name, email)
+                match = prefdb.insert_registration( user_id, screen_name, email) 
                 prefdb.commit()
             except Exception, e:
                 return error( e )
@@ -361,6 +365,7 @@ def check_login():
         
         #we should have a record of this id, from when it was authenticated
         user = prefdb.fetch_user_by_id( user_id )
+        
         if ( not user ):
             delete_authentication_cookie()
             raise LoginException( "We have no record of the id supplied. Resetting." )
@@ -417,26 +422,7 @@ schema = {
         }
     }   
 
-    
-#///////////////////////////////////////////////
-
-
-#TODO: this should be part of the (private) database api
-def safetyCall( func ):
-    """
-        This is a function that protects from mysqldb timeout,
-        performing one reconnection attempt if the provided lambda 
-        function generates a mysqldb error. This is necessary because
-        mysqldb does not currently provided an auto_reconnect facility.
-    """
-    try:
-        return func();
-    except MySQLdb.Error, e:
-        logging.error( "%s: db error %s" % ( "prefstore", e.args[ 0 ] ) )
-        prefdb.reconnect()
-        return func();
-    
-    
+       
 #///////////////////////////////////////////////
 
 
@@ -452,7 +438,7 @@ def submitDistill():
         user_id = request.forms.get( 'user_id' )
         data = request.forms.get( 'data' ) 
     except:
-        logging.debug( 
+        log.debug( 
             "%s: Incorrect parameters in submission API call" 
             % ( "prefstore", user_id ) 
         )
@@ -462,20 +448,20 @@ def submitDistill():
     try:
         #convert the data into a json object
         data = json.loads( data )
-        
+
         #Make sure the message is in the correct distill format.
         validictory.validate( data, schema )
                
     except ValueError, e:
-        logging.error( 
-            "%s: JSON validation error - %s" 
-            % ( "prefstore", e ) 
+        log.error( 
+            "%s: Message from '%s': JSON validation error - %s" 
+            % ( "prefstore", user_id, e ) 
         )          
         return "{'success':false,'cause':'JSON error'}"       
         
     
     # Log that we have received the distill message.
-    logging.debug( 
+    log.debug( 
         "%s: Message from '%s' successfully unpacked" 
         % ( "prefstore", user_id ) 
     )
@@ -484,9 +470,9 @@ def submitDistill():
     try:    
         # First db interaction of this method so safety check in case 
         # a mysql timeout has occurred since we last accessed the db.
-        user = safetyCall( lambda: prefdb.fetch_user_by_id( user_id ) )
+        user = prefdb.fetch_user_by_id( user_id ) 
     except Exception, e: 
-        logging.error( 
+        log.error( 
             "%s: User Lookup Error for Message from '%s'" 
             % ( "prefstore", e ) 
         )          
@@ -496,7 +482,7 @@ def submitDistill():
     # Authenticate the user, using the supplied key
     if user:
         
-        logging.debug( 
+        log.debug( 
             "%s: Message successfully authenticated as belonging to '%s'" 
             % ( "prefstore", user[ "screen_name" ]  ) 
         )
@@ -506,16 +492,16 @@ def submitDistill():
             processDistill( user, data )
             return "{'success':true}"
         except:
-            logging.info( 
+            log.info( 
                 "%s: Processing Failure for message from '%s'" 
-                % ( "prefstore", user )
+                % ( "prefstore", user[ "screen_name" ]  )
             ) 
             return "{'success':false,'cause':'Processing error'}"
     
     else:
-        logging.warning( 
+        log.warning( 
             "%s: Identification Failure for message from '%s'" 
-            % ( "prefstore", user_id ) 
+            % ( "prefstore", user[ "screen_name" ]  ) 
         )
         return "{'success':false,'cause':'Authentication error'}"
             
@@ -529,7 +515,10 @@ def processDistill( user, data ) :
     user_id =  user[ "user_id" ]
     mtime = data.get( 'mtime' )
     fv = data.get( 'fv' )
+    start_processing = time.time()
     
+    data_log.info( "%s: %s" % ( request.remote_addr, data) ) 
+        
     #Split the terms into ones that exist in the db, and ones that don't
     terms = prefdb.removeBlackListed( [ term for term in fv ] )
     existingDictTerms = prefdb.matchExistingTerms( terms )
@@ -542,7 +531,7 @@ def processDistill( user, data ) :
         try:
             prefdb.insertDictionaryTerm( term )
         except:
-            logging.warning( 
+            log.warning( 
                 "%s: Failed to add term '%s' to dictionary"
                 % ( "prefstore", term, user_id ) 
             )
@@ -554,7 +543,7 @@ def processDistill( user, data ) :
             processedTerms += 1
             total_term_appearances += fv.get( term )
         except:
-            logging.warning( 
+            log.warning( 
                 "%s: Failed to increment term '%s' for '%s'" 
                 % ( "prefstore", term, user_id ) 
             )
@@ -564,7 +553,7 @@ def processDistill( user, data ) :
         user_id, total_term_appearances, mtime )
     
     if not userUpdated :
-        logging.error( 
+        log.error( 
             "%s: User '%s' could not be updated. Ignoring." 
             % ( "prefstore", user[ "screen_name" ] ) 
         )
@@ -574,17 +563,18 @@ def processDistill( user, data ) :
     prefdb.commit()
     
     #Log the distillation results
-    logging.info( 
-        "%s: Message from '%s' (%d terms, %d extant, %d new, %d processed)" % ( 
+    log.info( 
+        "%s: Distillation processed for '%s' (%d terms, %d extant, %d new, %d processed, %.4f seconds)" % ( 
             "prefstore", 
             user[ "screen_name" ], 
             len( terms ), 
             len( existingDictTerms ), 
             len( newTerms ), 
-            processedTerms 
+            processedTerms,
+            time.time() - start_processing 
         ) 
     )
-    
+
     #And return from the function successfully
     return True
         
@@ -934,14 +924,29 @@ if __name__ == '__main__' :
     #-------------------------------
     # setup logging
     #-------------------------------
+    log = logging.getLogger( 'console_log' )
+    data_log = logging.getLogger( 'data_log' )
     
-    logging.basicConfig( 
-        format= '%(asctime)s [%(levelname)s] %(message)s', 
-        datefmt='%Y-%m-%d %I:%M:%S',
-        #filename='logs/prefstore.log',
-        level=logging.DEBUG 
-    )
+    #set logging levels
+    log.setLevel( logging.INFO )
+    data_log.setLevel( logging.DEBUG )    
 
+    # create handlers
+    ch = logging.StreamHandler()
+    fh = logging.handlers.TimedRotatingFileHandler( 
+        filename='logs/prefstore.log', 
+        when='D', 
+        interval=1 )
+        
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter( '--- %(asctime)s [%(levelname)s] %(message)s' )
+    ch.setFormatter( formatter )
+    fh.setFormatter( formatter )    
+
+    # add the handlers to the logger
+    log.addHandler( ch )
+    data_log.addHandler( fh )    
+    
     #-------------------------------
     # constants
     #-------------------------------
@@ -956,25 +961,25 @@ if __name__ == '__main__' :
     try:    
         pm = ProcessingModule.ProcessingModule()
     except Exception, e:
-        logging.error( "Processing Module failure: %s" % ( e, ) )
+        log.error( "Processing Module failure: %s" % ( e, ) )
         exit()
-
-    prefdb = PrefstoreDB.PrefstoreDB()  
+    
+    prefdb = PrefstoreDB.PrefstoreDB()
     prefdb.connect()
     prefdb.check_tables()
     
-    logging.info( "database initialisation completed... [SUCCESS]" );
+    log.info( "database initialisation completed... [SUCCESS]" );
         
     updater = WebCountUpdater()
     updater.start()
                 
-    logging.info( "web updater initialisation completed... [SUCCESS]" );
+    log.info( "web updater initialisation completed... [SUCCESS]" );
         
     try:
         debug( True )
         run( host='0.0.0.0', port=PORT )
     except Exception, e:
-        logging.error( "Web Server Startup failed: %s" % ( e, ) )
+        log.error( "Web Server Startup failed: %s" % ( e, ) )
         exit()
         
 

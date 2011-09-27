@@ -9,6 +9,10 @@ import json
 import logging
 import sys
 
+#setup logger for this module
+log = logging.getLogger( "console_log" )
+
+
 class WebSearch( object ):
     ''' classdocs '''
     
@@ -61,14 +65,14 @@ class WebSearch( object ):
             if error is None:
                 return jsonOutput.get( 'totalResults' )
             else:
-                logging.error( 
+                log.error( 
                     "Error %d from Google: %s" %
                     ( error.get( 'code' ), error.get('message') ) 
                 )
                 return None
             
         except:
-            logging.error( "Google formatting error %s" % sys.exc_info()[0] )
+            log.error( "Google formatting error %s" % sys.exc_info()[0] )
             return None    
     
     
@@ -95,7 +99,7 @@ class WebSearch( object ):
         errors = jsonOutput.get( 'Errors' ) 
         if not errors is None:
             for e in errors :
-                logging.error( "Error %d from Bing: %s" %
+                log.error( "Error %d from Bing: %s" %
                     ( e.get( 'Code' ), e.get('Message') ) )  
             raise
         
@@ -130,7 +134,7 @@ class WebSearch( object ):
         errors = jsonOutput.get( 'Errors' ) 
         if not errors is None:
             for e in errors :
-                logging.error( "Error %d from Bing: %s" %
+                log.error( "Error %d from Bing: %s" %
                     ( e.get( 'Code' ), e.get('Message') ) )  
             raise
         

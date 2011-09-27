@@ -9,16 +9,14 @@ import logging
 import time
 import sys
 import datetime
-
 import PrefstoreDB
 from WebSearch import * #@UnusedWildImport
-
-
-#///////////////////////////////////////////////
+log = logging.getLogger( "console_log" )
 
 WEB_PROXY = 'http://mainproxy.nottingham.ac.uk:8080'
 GOOGLE_APP_KEY = "AIzaSyBI8AxzRpN70njcpuOW9EaaRikxd-mc-1M&cx=017576662512468239146:omuauf_lfve"
 BING_KEY = "580DDBFFD1A4581F90038B9D5B80BA065FEFE4E7"
+
 
 #///////////////////////////////////////////////
 
@@ -66,9 +64,9 @@ class WebCountUpdater( threading.Thread ):
                 self.database.commit()
 
             except:
-                logging.error( "Error fectching web count for term %s: %s" % ( term, sys.exc_info()[0] ) )
+                log.error( "Error fectching web count for term %s: %s" % ( term, sys.exc_info()[0] ) )
 
-        logging.info( 
+        log.info( 
             "Web Count Update: Complete - %d terms, %d updated, %d blacklisted" % \
             ( len( terms) , termsUpdated, termsBlacklisted ) 
         )
@@ -93,7 +91,7 @@ class WebCountUpdater( threading.Thread ):
             
             missingCountList = self.database.getMissingCounts();
             
-            logging.info( 
+            log.info( 
                 "Web Count Update: %d terms require counts" 
                 % len( missingCountList )  
             )
@@ -103,7 +101,7 @@ class WebCountUpdater( threading.Thread ):
             
             self.nextUpdate = time.time() + self.INTERVAL_DURATION
              
-            logging.info( 
+            log.info( 
                 "Web Count Update: next update at %s " 
                 % datetime.datetime.fromtimestamp( self.nextUpdate )
             )

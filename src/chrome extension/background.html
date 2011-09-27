@@ -18,9 +18,14 @@
 	APPLICATION_NAME = "Google Chrome";
 	COOKIE_NAME = "logged_in"
 	PREFSTORE =  "http://localhost:8080/";
+
+	//-- give the cache a one hour duration
+	CACHE_DURATION = 60 * 60;
 	
 	//-- A list of domains that won't be parsed (predominantly search engines)
-	IGNORE_LIST = new Array( "www.bing", "www.google", "search.yahoo", "ask.com", "search.aol" )
+	IGNORE_LIST = new Array( 
+		"www.bing", "www.google", "search.yahoo", "ask.com", "search.aol"
+	)
 
 	window.localStorage.setItem( "cookie_name", COOKIE_NAME );
 	window.localStorage.setItem( "prefstore", PREFSTORE );
@@ -112,7 +117,10 @@
 	 * transmitting to the prefstore
 	 */
 	function processVector( text, url, title ) {
-	
+
+		//-- remove any items that have expired
+		cleanCache();
+
 		//--retrieve and fill the global variables
 		var user_id = window.localStorage.getItem( "user_id" );
 		var screen_name = window.localStorage.getItem( "screen_name" );
@@ -120,33 +128,107 @@
 		//-- if the user is logged in (and we have their details, then we 
 		//-- can organize sending the data to their prefstore. Otherwise
 		//-- for the moment we discard it
+		if ( !( user_id && screen_name ) ) 
+			return;
+
+
+		//-- parse the text with min_word_length 3, min_support 3
+		doc = new Parser( text, 3, 3 );
 		
-		if ( user_id && screen_name )  {
+		//-- create the distillation object (default duration to 10s for now)
+		var distillation = new Distillation( doc.fv, url, 10, title, doc.totalWords );
 
-			//-- determine whether the page passes the ignore_list
-			if ( !isIgnored( url ) ) 
-			{
+		//-- store the current page being observed, for the stats dropdown.
+		window.localStorage.setItem( "lastPage", distillation.stringify() );
+		window.localStorage.setItem( "lastPageStatus", null );
 
-				//-- parse the text with min_word_length 3, min_support 3
-				doc = new Parser( text, 3, 3 );
-				
-				//-- create the distillation object (default duration to 10s for now)
-				var distillation = new Distillation( doc.fv, url, 10, title, doc.totalWords );
-				
-				//-- store the current page being observed, for the stats dropdown.
-				window.localStorage.setItem( "lastPage", distillation.stringify() );
-				window.localStorage.setItem( "lastPageStatus", null );
-				incrementUserStat( "pagesAnalysed" );
-				
-				//-- transmit to the prefstore
-				chrome.browserAction.setIcon( { path:"icon-progress.png" } );
-				
-				transmitDistillation( distillation );
-				incrementUserStat( "pagesSent" );
-			}
-		}	
+		//-- determine whether the page passes the ignore_list
+		if ( isIgnored( url ) ) {
+			window.localStorage.setItem( "lastPageStatus", "blacklisted url - distillation not sent" );
+			return;
+		}
+
+
+		//-- check if the page is new, or we have an identical one in the cache
+		if ( !isPageNew( distillation ) ) {
+			window.localStorage.setItem( "lastPageStatus", "repeated page - distillation not sent" );
+			return
+		}
+		
+		//-- store the current page being observed, for the stats dropdown.
+		window.localStorage.setItem( "lastPage", distillation.stringify() );
+		window.localStorage.setItem( "lastPageStatus", null );
+		incrementUserStat( "pagesAnalysed" );
+
+		addToCache( distillation );
+
+		//-- transmit to the prefstore
+		chrome.browserAction.setIcon( { path:"icon-progress.png" } );
+	
+		transmitDistillation( distillation );
+		incrementUserStat( "pagesSent" );
+
 	}
 	
+
+	/**
+     * add the current distillation to the cache
+	 */
+	function addToCache( distillation ) {
+
+		var cache = window.localStorage.getItem( "cache" );
+		if ( cache == null || cache == "null" ) {
+			cache = [];
+		}
+		else {
+			cache = JSON.parse( cache );
+			cache.push( distillation );
+		}
+
+		window.localStorage.setItem( "cache", JSON.stringify( cache ) );
+	}
+
+
+	/**
+     * add the current distillation to the cache
+	 */
+	function cleanCache() {
+
+		var cache = window.localStorage.getItem( "cache" );
+		if ( cache == null || cache == "null" )  return;
+		else cache = JSON.parse( cache ); 
+
+		now = Math.round ( new Date().getTime() / 1000 );
+
+		for ( index = 0; index < cache.length; index++ ) 
+			if ( cache[ index ].mtime > now - CACHE_DURATION )
+				break;
+
+		cache = cache.slice( index )
+		window.localStorage.setItem( "cache", JSON.stringify( cache ) );
+	}
+
+
+	/**
+     * detect if we have seen this exact same page before
+	 */
+	function isPageNew( distillation ) {
+		
+		var cache = window.localStorage.getItem( "cache" );
+		if ( cache == null || cache == "null" )  return true;
+		else cache = JSON.parse( cache ); 
+
+		for ( i=0; i < cache.length; i++ ) {
+			if ( cache[ i ].docId == distillation.docId ) 
+				if ( cache[ i ].fv.length == distillation.fv.length )
+					return false;
+			
+		}
+
+		return true;
+	}
+
+
 
 	/**
      * Using AJAX, transmit the vector to the user's prefstore.

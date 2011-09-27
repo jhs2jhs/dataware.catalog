@@ -9,6 +9,10 @@ import ConfigParser
 from time import * #@UnusedWildImport
 import sys
 
+#setup logger for this module
+log = logging.getLogger( "console_log" )
+
+
 class PrefstoreDB( object ):
     ''' classdocs '''
     
@@ -24,6 +28,31 @@ class PrefstoreDB( object ):
     CONFIG_FILE = "prefstore.cfg"
     SECTION_NAME = "PrefstoreDB"
 
+    
+    #///////////////////////////////////////
+
+    def __getattribute__( self, name ):
+        """ I have included this __getattribute__ template design pattern 
+        because there are no gaurantees the user has mySQL setup so that 
+        it won't time out. If it has this function remedies it.
+        """
+        
+        attr = object.__getattribute__(self, name)
+        if hasattr( attr, '__call__' ):
+            
+            def safety_func( *args, **kwargs ):
+                try:
+                    return attr( *args, **kwargs );
+                except MySQLdb.Error, e:
+                    log.error( "%s: db error %s" % ( "prefstoreDB Safety Call", e.args[ 0 ] ) )
+                    self.reconnect()
+                    return attr( *args, **kwargs );
+                
+            return safety_func
+        
+        else:
+            return attr
+        
 
     #///////////////////////////////////////
 
@@ -119,7 +148,7 @@ class PrefstoreDB( object ):
         
     def connect( self ):
         
-        logging.info( "%s: connecting to mysql database..." % self.name )
+        log.info( "%s: connecting to mysql database..." % self.name )
 
         self.conn = MySQLdb.connect( 
             host=self.hostname,
@@ -136,7 +165,7 @@ class PrefstoreDB( object ):
     
     
     def reconnect( self ):
-        logging.info( "%s: Database reconnection process activated:" % self.name );
+        log.info( "%s: Database reconnection process activated:" % self.name );
         self.close()
         self.connect()
         
@@ -153,7 +182,7 @@ class PrefstoreDB( object ):
           
     def close( self ) :
         
-        logging.info( "%s: disconnecting from mysql database..." % self.name );
+        log.info( "%s: disconnecting from mysql database..." % self.name );
         self.cursor.close();
         self.conn.close()
                      
@@ -163,7 +192,7 @@ class PrefstoreDB( object ):
     
     def check_tables( self ):
         
-        logging.info( "%s: checking system table integrity..." % self.name );
+        log.info( "%s: checking system table integrity..." % self.name );
         
         self.cursor.execute ( """
             SELECT table_name
@@ -191,14 +220,14 @@ class PrefstoreDB( object ):
     
                
     def create_table( self, tableName ):
-        logging.warning( 
+        log.warning( 
             "%s: missing system table detected: '%s'" 
             % ( self.name, tableName ) 
         );
         
         if tableName in self.createQueries :
             
-            logging.info( 
+            log.info( 
                 "%s: --- creating system table '%s' " 
                 % ( self.name, tableName )
             );  
@@ -213,7 +242,7 @@ class PrefstoreDB( object ):
         
         if user_id:
             
-            logging.info( 
+            log.info( 
                 "%s %s: Adding user '%s' into database" 
                 % ( self.name, "insert_user", user_id ) 
             );
@@ -228,7 +257,7 @@ class PrefstoreDB( object ):
             return True;
         
         else:
-            logging.warning( 
+            log.warning( 
                 "%s %s: Was asked to add 'null' user to database" 
                 % (  self.name, "insert_user", ) 
             );
@@ -242,7 +271,7 @@ class PrefstoreDB( object ):
             
         if ( user_id and screen_name and email ):
             
-            logging.info( 
+            log.info( 
                 "%s %s: Updating user '%s' registration in database" 
                 % ( self.name, "insert_registration", user_id ) 
             );
@@ -257,7 +286,7 @@ class PrefstoreDB( object ):
             return True;
         
         else:
-            logging.warning( 
+            log.warning( 
                 "%s %s: Registration requested with incomplete details" 
                 % (  self.name, "insert_registration", ) 
             );
@@ -348,19 +377,19 @@ class PrefstoreDB( object ):
                 query, ( total_term_appearances, mtime, int( time() ), user_id ) )
 
             if update > 0 :
-                logging.debug( 
+                log.debug( 
                     "%s: Updated user info for %s" 
                     % ( self.name, user_id )  
                 )
                 return True
             else:
-                logging.warning( 
+                log.warning( 
                     "%s: trying to update an unknown user" 
                     % self.name 
                 )
                 return False
         else :
-            logging.warning( 
+            log.warning( 
                 "%s: attempting to update User with incomplete data" 
                 % self.name 
             )
@@ -392,7 +421,7 @@ class PrefstoreDB( object ):
             query = "UPDATE %s.%s SET count = %s, ctime = %s WHERE term = %s" % \
                 ( self.DB_NAME, self.TBL_TERM_DICTIONARY, '%s', '%s', '%s' ) 
             
-            logging.debug( 
+            log.debug( 
                 "%s %s: Updating dictionary term '%s' with web count '%d'" 
                 % ( self.name, "updateTermCount", term, count ) 
             );
@@ -411,7 +440,7 @@ class PrefstoreDB( object ):
 
         try:     
             if term:
-                logging.debug( 
+                log.debug( 
                     "%s %s: Creating new dictionary term '%s' " 
                     % ( self.name, "insertDictionaryTerm", term ) 
                 );
@@ -424,13 +453,13 @@ class PrefstoreDB( object ):
                 self.cursor.execute( query, ( term, int( time() ) ) )
                 
             else:
-                logging.warning(
+                log.warning(
                     "%s %s: Trying to create new dictionary term '%s' : ignoring..." 
                     % ( self.name, "insertDictionaryTerm", term ) 
                 );
                      
         except:
-            logging.error( "error %s" % sys.exc_info()[0] )
+            log.error( "error %s" % sys.exc_info()[0] )
 
              
     #///////////////////////////////////////
@@ -438,7 +467,7 @@ class PrefstoreDB( object ):
     
     def deleteDictionaryTerm( self, term = None ):
         
-        logging.debug( 
+        log.debug( 
             "%s %s: Deleting term '%s' " 
             % ( self.name, "deleteDictionaryTerm", term ) 
         );
@@ -455,10 +484,11 @@ class PrefstoreDB( object ):
         try:
             if term and user_id:
                 
-                logging.debug( 
+                log.debug( 
                     "%s %s: Updating term '%s' for user '%s': +%d appearances" 
                     % ( self.name, "updateTermAppearance", term, user_id, freq ) 
                 );
+                
                 query = """
                     INSERT INTO %s.%s ( user_id, term, doc_appearances, total_appearances, last_seen ) 
                     VALUES ( %s, %s, %s, %s, %s )
@@ -471,13 +501,13 @@ class PrefstoreDB( object ):
                 self.cursor.execute( query, ( user_id, term, 1, freq, int( time() ), freq, int( time() ) ) )
                   
             else:
-                logging.warning( 
+                log.warning( 
                     "%s %s: Updating term '%s' for user '%s': ignoring..." 
                     % ( self.name, "updateTermAppearance" , term, user_id, freq ) 
                 );
             
         except Exception, e:
-            logging.error(
+            log.error(
                 "%s %s: error %s" 
                 % ( self.name, "updateTermAppearance" , sys.exc_info()[0] ) 
             )
@@ -589,7 +619,7 @@ class PrefstoreDB( object ):
             #convert those results into a dictionary and return it
             matches = [ row.get( 'term' ) for row in self.cursor.fetchall() ]
             
-            logging.debug( 
+            log.debug( 
                 "%s %s: Removing %d terms from distillation" 
                 % ( self.name, "removeBlackListed", len( matches ) ) 
             );
@@ -603,12 +633,12 @@ class PrefstoreDB( object ):
        
        
     def blacklistTerm( self, term ):           
-        logging.info( "Blacklisting term '%s' " % ( term ) );
+        log.info( "Blacklisting term '%s' " % ( term ) );
         self.deleteDictionaryTerm( term )
         
         try:     
             if term:
-                logging.debug( 
+                log.debug( 
                     "%s %s: Blocking new  term '%s' " 
                     % ( self.name, "blacklistTerm", term ) 
                 );
@@ -621,13 +651,13 @@ class PrefstoreDB( object ):
                 self.cursor.execute( query, ( term ) )
                 
             else:
-                logging.debug( 
+                log.debug( 
                     "%s %s: Blocking new term '%s' : ignoring..." 
                     % ( self.name, "blacklistTerm", term ) 
                 )
                      
         except:
-            logging.error( 
+            log.error( 
                 "%s %s: Error %s" 
                 % ( self.name, "blacklistTerm",sys.exc_info()[0] ) 
             )
