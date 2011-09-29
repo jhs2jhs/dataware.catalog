@@ -150,11 +150,11 @@
 
 
 		//-- check if the page is new, or we have an identical one in the cache
-		if ( !isPageNew( distillation ) ) {
+/*		if ( !isPageNew( distillation ) ) {
 			window.localStorage.setItem( "lastPageStatus", "repeated page - distillation not sent" );
 			return
 		}
-		
+*/		
 		//-- store the current page being observed, for the stats dropdown.
 		window.localStorage.setItem( "lastPage", distillation.stringify() );
 		window.localStorage.setItem( "lastPageStatus", null );
