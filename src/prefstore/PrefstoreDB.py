@@ -534,7 +534,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
        
   
-    def updateTermAppearances2( self, user_id = None, fv = None ) :
+    def updateTermAppearances( self, user_id = None, fv = None ) :
         """ This method is quite convoluted, due to trying to optimize the
         time it takes to do batch updates (which is extremely slow on mysql).
         Batch Inserts are quick, so that is harnessed by constructing updated
