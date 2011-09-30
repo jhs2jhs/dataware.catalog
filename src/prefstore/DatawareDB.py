@@ -48,7 +48,7 @@ class DatawareDB( object ):
     
     #///////////////////////////////////////
 
-
+    #FIXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX! LOOPS BECAUSE reconnect also uses this!
     def __getattribute__( self, name ):
         """ I have included this __getattribute__ template design pattern 
         because there are no gaurantees the user has mySQL setup so that 
@@ -62,7 +62,7 @@ class DatawareDB( object ):
                 try:
                     return attr( *args, **kwargs );
                 except MySQLdb.Error, e:
-                    self.console_log.error( "%s: db error %s" % ( "datawareDB Safety Call", e.args[ 0 ] ) )
+                    self.console_log.error( "%s: db error %s" % ( "DatawareDB Safety Call", e.args[ 0 ] ) )
                     self.reconnect()
                     return attr( *args, **kwargs );
                 

@@ -516,61 +516,63 @@ def processDistill( user, data ) :
     mtime = data.get( 'mtime' )
     fv = data.get( 'fv' )
     start_processing = time.time()
+    total_terms = len( fv )
+    new_terms = None
     
-    data_log.info( "%s: %s" % ( request.remote_addr, data) ) 
-        
-    #Split the terms into ones that exist in the db, and ones that don't
-    terms = prefdb.removeBlackListed( [ term for term in fv ] )
-    existingDictTerms = prefdb.matchExistingTerms( terms )
-    newTerms = [ term for term in terms if term not in existingDictTerms ]
-    processedTerms = 0
-    total_term_appearances = 0
+    #add the distillation to a log file for future analysis
+    data_log.info( "%s: %s" % ( request.remote_addr, data ) ) 
     
+    #Remove any blacklisted terms from the feature vector
+    prefdb.removeBlackListedTerms( fv )
+    processed_terms = len( fv )
+    total_appearances = sum( fv.values() )
+           
     #Process the terms we haven't seen before
-    for term in newTerms:
-        try:
-            prefdb.insertDictionaryTerm( term )
-        except:
-            log.warning( 
-                "%s: Failed to add term '%s' to dictionary"
-                % ( "prefstore", term, user_id ) 
-            )
- 
-    #Process the terms that already exist in the dictinoary            
-    for term in terms:
-        try:
-            prefdb.updateTermAppearance( user_id, term, fv.get( term ) );    
-            processedTerms += 1
-            total_term_appearances += fv.get( term )
-        except:
-            log.warning( 
-                "%s: Failed to increment term '%s' for '%s'" 
-                % ( "prefstore", term, user_id ) 
-            )
+    try:
+        new_terms = prefdb.insertDictionaryTerms( fv )
+    except:
+        log.warning( 
+            "%s: Error trying to add terms to dictionary"
+            % ( "prefstore" ) 
+        )
+        raise Exception
     
+    #Process the terms that already exist in the dictinoary            
+    try:
+        prefdb.updateTermAppearances( user_id, fv );    
+    except:
+        log.warning( 
+            "%s: Failed to increment term appearances for '%s'" 
+            % ( "prefstore", user_id ) 
+        )
+        raise Exception        
+
     #Update user info, incrementing the number of documents we have received.
     userUpdated = prefdb.incrementUserInfo( 
-        user_id, total_term_appearances, mtime )
-    
+        user_id, total_appearances, mtime 
+    )
+
     if not userUpdated :
         log.error( 
             "%s: User '%s' could not be updated. Ignoring." 
             % ( "prefstore", user[ "screen_name" ] ) 
         )
         return False    
-            
+      
     #Everything seems okay, so commit the transaction
-    prefdb.commit()
+    #TODO: reinstate duplicate avoidance in extension
+    #TODO: reinstate this coomit
+    #prefdb.commit()
     
     #Log the distillation results
     log.info( 
-        "%s: Distillation processed for '%s' (%d terms, %d extant, %d new, %d processed, %.4f seconds)" % ( 
+        "%s: Distillation processed for '%s' (%d terms, %d processed, %d new, %d appearances, %.4f secs)" % ( 
             "prefstore", 
             user[ "screen_name" ], 
-            len( terms ), 
-            len( existingDictTerms ), 
-            len( newTerms ), 
-            processedTerms,
+            total_terms,
+            processed_terms, 
+            new_terms,
+            total_appearances,
             time.time() - start_processing 
         ) 
     )
@@ -749,14 +751,12 @@ def word_cloud():
            len( results ), order_by, 
         ) 
         
-        
         data_str = "{'text':'%s', weight:%d, url:'javascript:select(\"%s\")'},"
         total_appearance_data = ""
         doc_appearance_data = ""
         web_importance_data = ""        
         relevance_data = ""
      
-        
         #TODO: Should also add ability to blacklist terms at some point
         if results:
             for row in results:
@@ -935,8 +935,8 @@ if __name__ == '__main__' :
     ch = logging.StreamHandler()
     fh = logging.handlers.TimedRotatingFileHandler( 
         filename='logs/prefstore.log', 
-        when='D', 
-        interval=1 )
+        when='H', 
+        interval=24 )
         
     # create formatter and add it to the handlers
     formatter = logging.Formatter( '--- %(asctime)s [%(levelname)s] %(message)s' )
