@@ -19,7 +19,6 @@ class PrefstoreDB( object ):
     DB_NAME = 'prefstore'
     TBL_PERIODS = 'tblPeriods'
     TBL_TERM_APPEARANCES = 'tblTermAppearances'
-    TBL_TERM_APPEARANCES_STAGING = 'tblTermAppearancesStaging'
     TBL_TERM_DICTIONARY = 'tblTermDictionary'
     TBL_TERM_BLACKLIST = 'tblTermBlacklist'
     TBL_USER_DETAILS = 'tblUserDetails'
@@ -29,9 +28,6 @@ class PrefstoreDB( object ):
     CONFIG_FILE = "prefstore.cfg"
     SECTION_NAME = "PrefstoreDB"
 
-    
-    #///////////////////////////////////////
-        
 
     #///////////////////////////////////////
 
@@ -71,18 +67,6 @@ class PrefstoreDB( object ):
             
         """  % ( DB_NAME, TBL_TERM_APPEARANCES, TBL_USER_DETAILS, TBL_TERM_DICTIONARY ),
        
-        TBL_TERM_APPEARANCES_STAGING : """
-            CREATE TABLE %s.%s (
-            user_id varchar(256) NOT NULL,
-            term varchar(128) NOT NULL,
-            doc_appearances bigint(20) unsigned NOT NULL,
-            total_appearances bigint(20) unsigned NOT NULL,
-            last_seen int(10) unsigned NOT NULL,
-            PRIMARY KEY (user_id, term) )
-            ENGINE=InnoDB DEFAULT CHARSET=latin1;
-            
-        """  % ( DB_NAME, TBL_TERM_APPEARANCES_STAGING ),
-        
         TBL_USER_DETAILS : """
             CREATE TABLE %s.%s (
             user_id varchar(256) NOT NULL,
@@ -201,8 +185,6 @@ class PrefstoreDB( object ):
             self.create_table( self.TBL_TERM_BLACKLIST )                      
         if not self.TBL_TERM_APPEARANCES in tables : 
             self.create_table( self.TBL_TERM_APPEARANCES )
-        if not self.TBL_TERM_APPEARANCES_STAGING in tables : 
-            self.create_table( self.TBL_TERM_APPEARANCES_STAGING )            
         if not self.VIEW_TERM_SUMMARIES in tables : 
             self.create_table( self.VIEW_TERM_SUMMARIES )
             
@@ -537,13 +519,14 @@ class PrefstoreDB( object ):
     def updateTermAppearances( self, user_id = None, fv = None ) :
         """ This method is quite convoluted, due to trying to optimize the
         time it takes to do batch updates (which is extremely slow on mysql).
-        Batch Inserts are quick, so that is harnessed by constructing updated
-        stats here on the server via a SELECT and some processing, then 
-        inserting those into a staging area, and then merging those to the 
-        master term appearances table. This gains a % performance increase
-        over using straight updates.
+        Batch Inserts are quick, so that is harnessed here. In fact you can
+        end up with is the ridiculous situation where it is better to send a 
+        "batch insert into on duplicate key update" than a batch "update"...
+        even when you know that every single change is an update. There is 
+        also a supreme gotcha - unless the "VALUES" part of the insert 
+        statement is in lowercase mysqldb will send the batch insert as 
+        individual insert statements, annhialating efficiency gains. Absurd.
         """
-        
         if not ( user_id and fv ):
             log.warning(
                 "%s %s: Invariance failure in updateTermAppearances: ignoring..." 
@@ -551,62 +534,23 @@ class PrefstoreDB( object ):
             return
         
         try:    
-            #obtain the current stats for the terms we are updating (if they exist)
-            formatStrings = ','.join( ['%s'] * len( fv ) )
-            query = """
-                SELECT * FROM %s.%s 
-                WHERE user_id = %s AND term IN (%s)
-            """ % (  self.DB_NAME, self.TBL_TERM_APPEARANCES, '%s', formatStrings )
-            self.cursor.execute( query, ( user_id, ) + tuple( fv ) ) 
-                    
-            #turn the feature vector into a dict of term, tuple pairs, with
-            #each tuple containing the additional term and doc_appearances 
-            for k, v in fv.items(): 
-                fv[ k ] = ( v, 1 )
-            
-            #add the new stats to them (where new stats exist)
-            for row in self.cursor.fetchall():
-                term = row.get( 'term' ) 
-                fv[ term ] = ( 
-                    fv[term][0] + row.get( 'total_appearances' ), 
-                    row.get( 'doc_appearances' ) + 1
-                )
-            
             #convert the results into a list of tuples ready for processing
-            insert_tuples = [ ( user_id, k, v[0], v[1], int( time() ) ) for k,v in fv.items() ] 
-            
-            #insert the new tuples into the staging area
+            insert_tuples = [ ( user_id, k, v, 1, int( time() ) ) for k,v in fv.items() ] 
+
+            #insert the new tuples (updating if they alredy exist)
             query = """
                 INSERT INTO %s.%s ( user_id, term, doc_appearances, total_appearances, last_seen ) 
                 values ( %s, %s, %s, %s, %s )
-            """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES_STAGING, '%s', '%s', '%s', '%s', '%s' ) 
+                ON DUPLICATE KEY UPDATE
+                doc_appearances = doc_appearances + VALUES( doc_appearances ),
+                total_appearances = total_appearances + VALUES( total_appearances ),
+                last_seen = VALUES( last_seen )
+            """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES, '%s', '%s', '%s', '%s', '%s' ) 
+            
             self.cursor.executemany( query, insert_tuples )
             
-            #insert the new tuples into the staging area
-            query = """
-                INSERT INTO %s.%s
-                SELECT * FROM %s.%s s
-                ON DUPLICATE KEY UPDATE
-                %s.%s.doc_appearances = %s.%s.doc_appearances + s.doc_appearances,
-                %s.%s.total_appearances = %s.%s.total_appearances + s.total_appearances,
-                %s.%s.last_seen = s.last_seen
-            """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES, 
-                     self.DB_NAME, self.TBL_TERM_APPEARANCES_STAGING,
-                     self.DB_NAME, self.TBL_TERM_APPEARANCES,
-                     self.DB_NAME, self.TBL_TERM_APPEARANCES,
-                     self.DB_NAME, self.TBL_TERM_APPEARANCES,
-                     self.DB_NAME, self.TBL_TERM_APPEARANCES,
-                     self.DB_NAME, self.TBL_TERM_APPEARANCES )             
-            self.cursor.execute( query )
-            
-            #and finally clear up the staging table ready for the next update
-            query = """
-                DELETE FROM %s.%s
-            """  % ( self.DB_NAME, self.TBL_TERM_APPEARANCES_STAGING ) 
-            self.cursor.execute( query )
-          
         except:
-            log.error( "error %s" % sys.exc_info()[0] )
+            log.error( "error %s" % sys.exc_info()[0] ) 
             
             
                     

@@ -560,9 +560,7 @@ def processDistill( user, data ) :
         return False    
       
     #Everything seems okay, so commit the transaction
-    #TODO: reinstate duplicate avoidance in extension
-    #TODO: reinstate this coomit
-    #prefdb.commit()
+    prefdb.commit()
     
     #Log the distillation results
     log.info( 
