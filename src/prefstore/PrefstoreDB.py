@@ -8,9 +8,29 @@ import logging
 import ConfigParser
 from time import * #@UnusedWildImport
 import sys
-
-#setup logger for this module
 log = logging.getLogger( "console_log" )
+
+
+#///////////////////////////////////////
+
+
+def safety_mysql( fn ) :
+    """ I have included this decorator because there are no 
+    gaurantees the user has mySQL setup so that it won't time out. 
+    If it has, this function remedies it, by trying (one shot) to
+    reconnect to the database.
+    """
+
+    def wrapper( self, *args, **kwargs ) :
+        try:
+            return fn( self, *args, **kwargs )
+        except MySQLdb.Error, e:
+            self.reconnect()
+            return fn( self, *args, **kwargs )    
+    return wrapper
+
+
+#///////////////////////////////////////
 
 
 class PrefstoreDB( object ):
@@ -140,14 +160,15 @@ class PrefstoreDB( object ):
     
     
     def reconnect( self ):
-        log.info( "%s: Database reconnection process activated:" % self.name );
+        log.info( "%s: Database reconnection process activated..." % self.name );
         self.close()
         self.connect()
         
 
     #///////////////////////////////////////
           
-                
+    
+    @safety_mysql
     def commit( self ) : 
         self.conn.commit();
         
@@ -155,16 +176,17 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
         
           
-    def close( self ) :
-        
-        log.info( "%s: disconnecting from mysql database..." % self.name );
-        self.cursor.close();
-        self.conn.close()
-                     
-                            
+    def close( self ) :   
+        if self.conn.open:
+            log.info( "%s: disconnecting from mysql database..." % self.name );
+            self.cursor.close();
+            self.conn.close();
+                
+                       
     #////////////////////////////////////////////////////////////////////////////////////////////
     
     
+    @safety_mysql
     def check_tables( self ):
         
         log.info( "%s: checking system table integrity..." % self.name );
@@ -193,7 +215,8 @@ class PrefstoreDB( object ):
         
     #///////////////////////////////////////
     
-               
+    
+    @safety_mysql
     def create_table( self, tableName ):
         log.warning( 
             "%s: missing system table detected: '%s'" 
@@ -212,7 +235,7 @@ class PrefstoreDB( object ):
 
     #///////////////////////////////////////
               
-                
+    @safety_mysql                
     def insert_user( self, user_id ):
         
         if user_id:
@@ -242,6 +265,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
     
     
+    @safety_mysql                    
     def insert_registration( self, user_id, screen_name, email ):
             
         if ( user_id and screen_name and email ):
@@ -271,6 +295,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
 
 
+    @safety_mysql                
     def fetch_user_by_id( self, user_id ) :
 
         if user_id :
@@ -280,6 +305,7 @@ class PrefstoreDB( object ):
         
             self.cursor.execute( query, ( user_id, ) )
             row = self.cursor.fetchone()
+
             if not row is None:
                 return row
             else :
@@ -291,6 +317,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
 
 
+    @safety_mysql                
     def fetch_user_by_email( self, email ) :
 
         if email :
@@ -311,6 +338,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
 
 
+    @safety_mysql                
     def fetch_user_summary( self, user_id ) :
 
         if user_id :
@@ -332,6 +360,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
                     
                     
+    @safety_mysql                                    
     def incrementUserInfo(self, 
             user_id = None, 
             total_term_appearances = 1, 
@@ -376,9 +405,9 @@ class PrefstoreDB( object ):
     # WEB UPDATER CALLS
     #//////////////////////////////////////////////////////////               
         
-        
+
+    @safety_mysql                
     def getMissingCounts( self ):
-       
         query = """
             SELECT term FROM %s.%s where count IS NULL 
         """  % ( self.DB_NAME, self.TBL_TERM_DICTIONARY ) 
@@ -389,7 +418,8 @@ class PrefstoreDB( object ):
     
     #///////////////////////////////////////
                    
-        
+
+    @safety_mysql                        
     def updateTermCount( self, term, count ):
         
         if term: 
@@ -411,6 +441,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////   
     
     
+    @safety_mysql                
     def insertDictionaryTerm( self, term = None ):
 
         try:     
@@ -440,6 +471,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////   
     
     
+    @safety_mysql                
     def insertDictionaryTerms( self, fv = None ):
 
         if not ( fv and len( fv ) > 0 ):
@@ -464,7 +496,8 @@ class PrefstoreDB( object ):
              
     #///////////////////////////////////////
             
-    
+            
+    @safety_mysql                    
     def deleteDictionaryTerm( self, term = None ):
         
         log.debug( 
@@ -479,6 +512,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
               
                 
+    @safety_mysql                
     def updateTermAppearance( self, user_id = None, term = None, freq = 0 ):
         
         try:
@@ -516,6 +550,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
        
   
+    @safety_mysql                
     def updateTermAppearances( self, user_id = None, fv = None ) :
         """ This method is quite convoluted, due to trying to optimize the
         time it takes to do batch updates (which is extremely slow on mysql).
@@ -557,6 +592,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////             
               
               
+    @safety_mysql                
     def getTermAppearance( self, user_id, term ):
         
         if user_id and term :
@@ -575,6 +611,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////          
     
         
+    @safety_mysql                
     def getTermCount( self, term = None ):
         
         if term:
@@ -596,6 +633,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////          
 
 
+    @safety_mysql                
     def getTermCountList( self, fv = None ):
          
         if fv:
@@ -616,6 +654,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////          
 
 
+    @safety_mysql                
     def matchExistingTerms( self, terms = None ):
         
         """
@@ -641,6 +680,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////          
 
 
+    @safety_mysql                
     def removeBlackListedTerms( self, fv = None ):
         """
             Takes a dict of terms and remove those in it that are 
@@ -672,6 +712,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
        
        
+    @safety_mysql                       
     def blacklistTerm( self, term ):           
         log.info( "Blacklisting term '%s' " % ( term ) );
         self.deleteDictionaryTerm( term )
@@ -706,6 +747,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
 
 
+    @safety_mysql                
     def fetch_terms( self, 
         user_id, 
         order_by='total appearances',
@@ -761,6 +803,7 @@ class PrefstoreDB( object ):
     #///////////////////////////////////////
 
 
+    @safety_mysql                
     def search_terms( self, 
         user_id, 
         search_term,

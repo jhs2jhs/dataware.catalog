@@ -105,7 +105,7 @@ def revoke_request():
 
 
 @route( '/login', method = "GET" )
-def openIDlogin():
+def openID_login():
 
     try: 
         username = request.GET[ 'username' ]    
@@ -427,7 +427,7 @@ schema = {
 
 
 @route( '/submitDistill', method = "POST" )
-def submitDistill():
+def submit_distill():
     """ 
         A Distillation is packaged as a json message of the form
         {user:u, docid:d, docType:t, appName:a, duration:d, mtime:m, fv:{ word:freq } }    
@@ -473,8 +473,8 @@ def submitDistill():
         user = prefdb.fetch_user_by_id( user_id ) 
     except Exception, e: 
         log.error( 
-            "%s: User Lookup Error for Message from '%s'" 
-            % ( "prefstore", e ) 
+            "%s: User Lookup Error %s' due to message from '%s'" 
+            % ( "prefstore", e, user_id,  ) 
         )          
         return "{'success':false,'cause':'User Lookup error'}"   
     
@@ -489,7 +489,7 @@ def submitDistill():
 
         # And finally process it into the database
         try:
-            processDistill( user, data )
+            process_distill( user, data )
             return "{'success':true}"
         except:
             log.info( 
@@ -509,7 +509,7 @@ def submitDistill():
 #///////////////////////////////////////////////        
        
         
-def processDistill( user, data ) :
+def process_distill( user, data ) :
     
     #Extract entry information
     user_id =  user[ "user_id" ]
@@ -932,9 +932,10 @@ if __name__ == '__main__' :
     # create handlers
     ch = logging.StreamHandler()
     fh = logging.handlers.TimedRotatingFileHandler( 
-        filename='logs/prefstore.log', 
-        when='H', 
-        interval=24 )
+        filename='logs/prefstore.log',
+
+        when='midnight', 
+        interval=21 )
         
     # create formatter and add it to the handlers
     formatter = logging.Formatter( '--- %(asctime)s [%(levelname)s] %(message)s' )
@@ -965,14 +966,12 @@ if __name__ == '__main__' :
     prefdb = PrefstoreDB.PrefstoreDB()
     prefdb.connect()
     prefdb.check_tables()
-    
     log.info( "database initialisation completed... [SUCCESS]" );
         
     updater = WebCountUpdater()
     updater.start()
-                
     log.info( "web updater initialisation completed... [SUCCESS]" );
-        
+                
     try:
         debug( True )
         run( host='0.0.0.0', port=PORT, quiet=True )

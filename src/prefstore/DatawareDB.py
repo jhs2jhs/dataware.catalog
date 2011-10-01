@@ -7,7 +7,31 @@ import MySQLdb
 import ConfigParser
 import hashlib
 import logging
+log = logging.getLogger( "console_log" )
 
+
+#///////////////////////////////////////
+
+
+def safety_mysql( fn ) :
+    """ I have included this decorator because there are no 
+    gaurantees the user has mySQL setup so that it won't time out. 
+    If it has, this function remedies it, by trying (one shot) to
+    reconnect to the database.
+    """
+
+    def wrapper( self, *args, **kwargs ) :
+        try:
+            return fn( self, *args, **kwargs )
+        except MySQLdb.Error, e:
+            self.reconnect()
+            return fn( self, *args, **kwargs )    
+    return wrapper
+    
+
+#///////////////////////////////////////
+
+    
 class DatawareDB( object ):
     ''' classdocs '''
     
@@ -45,32 +69,6 @@ class DatawareDB( object ):
         """  % ( DB_NAME, TBL_DATAWARE_QUERIES ),            
     } 
     
-    
-    #///////////////////////////////////////
-
-    #FIXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX! LOOPS BECAUSE reconnect also uses this!
-    def __getattribute__( self, name ):
-        """ I have included this __getattribute__ template design pattern 
-        because there are no gaurantees the user has mySQL setup so that 
-        it won't time out. If it has this function remedies it.
-        """
-        
-        attr = object.__getattribute__(self, name)
-        if hasattr( attr, '__call__' ):
-            
-            def safety_func( *args, **kwargs ):
-                try:
-                    return attr( *args, **kwargs );
-                except MySQLdb.Error, e:
-                    self.console_log.error( "%s: db error %s" % ( "DatawareDB Safety Call", e.args[ 0 ] ) )
-                    self.reconnect()
-                    return attr( *args, **kwargs );
-                
-            return safety_func
-        
-        else:
-            return attr
-        
         
     #///////////////////////////////////////
     
@@ -89,14 +87,13 @@ class DatawareDB( object ):
         self.dbname = Config.get( self.SECTION_NAME, "dbname" )
         self.connected = False;
 
-        self.console_log = logging.getLogger( "console_log" )
         
     #///////////////////////////////////////
     
 
     def connect( self ):
         
-        self.console_log.info( "%s: connecting to mysql database..." % self.name )
+        log.info( "%s: connecting to mysql database..." % self.name )
 
         self.conn = MySQLdb.connect( 
             host=self.hostname,
@@ -113,34 +110,36 @@ class DatawareDB( object ):
     
     
     def reconnect( self ):
-        self.console_log.info( "%s: Database reconnection process activated:" % self.name );
+        log.info( "%s: Database reconnection process activated..." % self.name );
         self.close()
         self.connect()
         
 
     #///////////////////////////////////////
           
-                
+          
+    @safety_mysql                
     def commit( self ) : 
         self.conn.commit();
         
         
     #///////////////////////////////////////
         
-          
-    def close( self ) :
-        
-        self.console_log.info( "%s: disconnecting from mysql database..." % self.name );
-        self.cursor.close();
-        self.conn.close()
+
+    def close( self ) :   
+        if self.conn.open:
+            log.info( "%s: disconnecting from mysql database..." % self.name );
+            self.cursor.close();
+            self.conn.close()
                      
    
     #///////////////////////////////////////
     
-        
+    
+    @safety_mysql        
     def checkTables( self ):
         
-        self.console_log.info( "%s: checking system table integrity..." % self.name );
+        log.info( "%s: checking system table integrity..." % self.name );
         
         self.cursor.execute ( """
             SELECT table_name
@@ -159,17 +158,18 @@ class DatawareDB( object ):
         
     #///////////////////////////////////////
     
-               
+    
+    @safety_mysql                  
     def createTable( self, tableName ):
         
-        self.console_log.warning( 
+        log.warning( 
             "%s: missing system table detected: '%s'" 
             % ( self.name, tableName ) 
         );
         
         if tableName in self.createQueries :
             
-            self.console_log.info( 
+            log.info( 
                 "%s: --- creating system table '%s' " 
                 % ( self.name, tableName )
             );  
@@ -180,6 +180,7 @@ class DatawareDB( object ):
     #////////////////////////////////////////////////////////////////////////////////////////////
 
 
+    @safety_mysql   
     def insert_request( self, access_token, client_id, user_id, expiry_time, query_code ):
        
         #create a SHA checksum for the file
@@ -207,6 +208,7 @@ class DatawareDB( object ):
     #///////////////////////////////////////////////
     
     
+    @safety_mysql       
     def delete_request( self, access_token, user_id ):
 
         query = """
@@ -227,6 +229,7 @@ class DatawareDB( object ):
     #///////////////////////////////////////////////
     
     
+    @safety_mysql       
     def fetch_request( self, access_token ):
         
         query = """
@@ -240,7 +243,10 @@ class DatawareDB( object ):
     #///////////////////////////////////////////////
 
 
+    @safety_mysql   
     def update_tfidf( self ):
+        """This is currently just a debugging test function
+        """
         
         f = open( 'doc_similarity.py', 'r' )
         code = f.read()
@@ -255,6 +261,7 @@ class DatawareDB( object ):
     #////////////////////////////////////////////////////////////////////////////////////////////
     
     
+    @safety_mysql       
     def authenticate( self, user_id, catalog_secret ) :
         
         if user_id and catalog_secret:

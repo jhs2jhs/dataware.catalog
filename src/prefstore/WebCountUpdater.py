@@ -13,6 +13,10 @@ import PrefstoreDB
 from WebSearch import * #@UnusedWildImport
 log = logging.getLogger( "console_log" )
 
+
+#///////////////////////////////////////////////
+
+
 WEB_PROXY = 'http://mainproxy.nottingham.ac.uk:8080'
 GOOGLE_APP_KEY = "AIzaSyBI8AxzRpN70njcpuOW9EaaRikxd-mc-1M&cx=017576662512468239146:omuauf_lfve"
 BING_KEY = "580DDBFFD1A4581F90038B9D5B80BA065FEFE4E7"
@@ -88,17 +92,14 @@ class WebCountUpdater( threading.Thread ):
         while True:
             
             self.database.connect()
-            
             missingCountList = self.database.getMissingCounts();
-            
-            log.info( 
-                "Web Count Update: %d terms require counts" 
-                % len( missingCountList )  
-            )
-            
-            if len( missingCountList ) > 0:
+        
+            if missingCountList:
+                log.info( "Web Count Update: %d terms require counts" % len( missingCountList ) )
                 self.fetchCounts( missingCountList )
-            
+            else:
+                log.info( "Web Count Update: all terms have counts" )
+                
             self.nextUpdate = time.time() + self.INTERVAL_DURATION
              
             log.info( 
