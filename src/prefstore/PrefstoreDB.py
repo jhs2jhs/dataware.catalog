@@ -143,7 +143,7 @@ class PrefstoreDB( object ):
         
     def connect( self ):
         
-        log.info( "%s: connecting to mysql database..." % self.name )
+        log.debug( "%s: connecting to mysql database..." % self.name )
 
         self.conn = MySQLdb.connect( 
             host=self.hostname,
@@ -160,7 +160,7 @@ class PrefstoreDB( object ):
     
     
     def reconnect( self ):
-        log.info( "%s: Database reconnection process activated..." % self.name );
+        log.debug( "%s: Database reconnection process activated..." % self.name );
         self.close()
         self.connect()
         
@@ -178,7 +178,7 @@ class PrefstoreDB( object ):
           
     def close( self ) :   
         if self.conn.open:
-            log.info( "%s: disconnecting from mysql database..." % self.name );
+            log.debug( "%s: disconnecting from mysql database..." % self.name );
             self.cursor.close();
             self.conn.close();
                 
@@ -570,7 +570,7 @@ class PrefstoreDB( object ):
         
         try:    
             #convert the results into a list of tuples ready for processing
-            insert_tuples = [ ( user_id, k, v, 1, int( time() ) ) for k,v in fv.items() ] 
+            insert_tuples = [ ( user_id, k, 1, v, int( time() ) ) for k,v in fv.items() ] 
 
             #insert the new tuples (updating if they alredy exist)
             query = """
