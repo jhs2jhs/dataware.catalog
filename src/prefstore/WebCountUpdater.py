@@ -38,7 +38,8 @@ class WebCountUpdater( threading.Thread ):
         
         
     def __init__( self ):
-        self.search = WebSearch( proxy=WEB_PROXY, bing_key=BING_KEY )
+        #self.search = WebSearch( proxy=WEB_PROXY, bing_key=BING_KEY )
+        self.search = WebSearch( bing_key=BING_KEY )        
         self.database = PrefstoreDB.PrefstoreDB( "webdb" );    
         threading.Thread.__init__( self )
  
