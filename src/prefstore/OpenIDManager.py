@@ -113,7 +113,7 @@ def buildRedirectURL( endpoint_url, assoc_handle, return_to, realm ):
          return_to and
          realm ):
 
-        return endpoint_url + \
+        parameters = \
             "?openid.ns=http://specs.openid.net/auth/2.0" + \
             "&openid.mode=checkid_setup" + \
             "&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select" + \
@@ -121,6 +121,8 @@ def buildRedirectURL( endpoint_url, assoc_handle, return_to, realm ):
             "&openid.return_to=" + return_to + \
             "&openid.realm=" + realm + \
             "&openid.assoc_handle=" + assoc_handle
+
+        return endpoint_url + parameters 
     else:
         raise Exception()
 
