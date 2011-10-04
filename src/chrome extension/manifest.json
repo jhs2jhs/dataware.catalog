@@ -14,7 +14,7 @@
      }
   ],
   "permissions": [
-  	 "cookies",
+     "cookies",
      "tabs",
      "http://localhost/*",
      "http://ec2-79-125-74-77.eu-west-1.compute.amazonaws.com/*",

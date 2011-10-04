@@ -12,6 +12,7 @@
 	DIV_NAMES[ 3 ] = "loggedOutMsg";
 	PREFSTORE = window.localStorage.getItem( "prefstore" );
 	COOKIE_NAME = window.localStorage.getItem( "cookie_name" );	
+	COOKIE_DOMAIN = window.localStorage.getItem( "cookie_domain" );	
 	
 	//-- Setup the global variables for the page
 	var user_id;
@@ -26,7 +27,6 @@
 		user_id = window.localStorage.getItem( "user_id" );
 		screen_name = window.localStorage.getItem( "screen_name" );
 
-		
 		$( '#screen_name' ).html( screen_name ) 
 		
 		//-- create the appropriate information box
@@ -125,11 +125,13 @@
 	 * Function that redirects the user to the server's openid login
 	 */ 
 	function logout( provider ) {
-		chrome.cookies.remove({ "url" : PREFSTORE, "name" : COOKIE_NAME }, function(info) {
+
+		chrome.cookies.remove({ "url" : COOKIE_DOMAIN, "name" : COOKIE_NAME }, function(info) {
+				user_id = window.localStorage.removeItem( "user_id" );
+				screen_name = window.localStorage.removeItem( "screen_name" );
 				refresh(300);
 			}
 		);
-		//-- window.open( PREFSTORE + "logout", "_blank" )
 	}
 	
 	

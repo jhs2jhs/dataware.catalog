@@ -14,8 +14,9 @@
 	DOCUMENT_TYPE = "web";
 	APPLICATION_NAME = "Google Chrome";
 	COOKIE_NAME = "logged_in"
+	COOKIE_DOMAIN = "http://79.125.106.208"
 	PREFSTORE =  "http://www.prefstore.org/";
-	IP = "http://79.125.106.208"
+
 
 	//-- give the cache a one hour duration
 	CACHE_DURATION = 60 * 60;
@@ -26,6 +27,7 @@
 	)
 
 	window.localStorage.setItem( "cookie_name", COOKIE_NAME );
+	window.localStorage.setItem( "cookie_domain", COOKIE_DOMAIN );
 	window.localStorage.setItem( "prefstore", PREFSTORE );
 	
 	//-- initialize by parsing the extensions corresponding cookie	
@@ -50,17 +52,17 @@
 	function parse_cookie() {
 		
 		a = chrome.cookies.get(
-			{ "url" : IP, "name" : COOKIE_NAME },
+			{ "url" : COOKIE_DOMAIN, "name" : COOKIE_NAME },
 			function( cookie ) {
 
 				window.localStorage.removeItem( "user_id" );
 				window.localStorage.removeItem( "screen_name" );
 				
 				if ( cookie ) {
-					console.log( "have cookie retrieved" )
+
 					jsonString = eval( cookie.value )
 					data = eval( '(' + jsonString + ')' )
-					
+
 					if ( data.user_id ) {
 						window.localStorage.setItem( "user_id", data.user_id );
 					}
