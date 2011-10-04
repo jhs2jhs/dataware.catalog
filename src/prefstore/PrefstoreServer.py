@@ -175,7 +175,7 @@ def authenticate():
     else:
         delete_authentication_cookie()
         
-    redirect( ROOT_PAGE )
+    return "<script>self.parent.location = '%s'</script>" % ( REALM + ROOT_PAGE,)
        
                 
 #///////////////////////////////////////////////
