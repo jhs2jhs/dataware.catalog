@@ -75,7 +75,13 @@
 
 				<div class="table_item">
 					<div class="table_field_name">Unique Terms Seen:</div>
-					<div class="table_field_value"> {{summary[ "unique_terms"]}} </div>
+					<div class="table_field_value">
+					%if summary:
+						{{summary[ "unique_terms"]}} 
+					%else:
+						<span>0</span>
+					%end
+					</div>
 				</div>
 
 				<div class="table_item">

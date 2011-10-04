@@ -39,7 +39,7 @@
 			please pick a screen name, and register an email address:
 		</div>
 		<div id="loggedOutBox" >
-        <form action="http://localhost:8080/register" method="GET" >
+        <form action="register" method="GET" >
 			<div style="padding:0 10 0 8; float:left; border:0px dotted; height:100px; font-size:12px; font-family:georgia; color:#555555;">
 	            <div>Screen Name:
 				%if "screen_name" in errors:
