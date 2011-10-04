@@ -10,8 +10,10 @@
 <script type="text/javascript" src="http://www.google.com/jsapi"></script>
 
 <script>
+
+	PREFSTORE = "http://www.prefstore.org/"
+
 	$( document ).ready( function() {
-		
 		$( 'div.menu_button' ).mouseover(function() {
 			$(this).css( 'cursor', 'hand' );
             $( this ).addClass( "menu_button_selected" );
@@ -29,7 +31,7 @@
 		});
 
 		$( 'div.menu_button' ).click( function() {
-			window.location= $( this ).attr('id');
+			self.parent.location= PREFSTORE + $( this ).attr('id');
 		});
 
 	});
