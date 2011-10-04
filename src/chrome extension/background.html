@@ -8,16 +8,14 @@
 	/** 
 	 * This is the Controller Script for the Google Chrome Datware.
 	 * It receives requests from the content and popup scripts.
-	 * TODO: Should keep track of web-history, to check that a web page is not being repeatedly read (also solves back button problem)
-	 * TODO: Keep track of IP Address
 	 */
-
 
 	//-- Setup constants that will be required
 	DOCUMENT_TYPE = "web";
 	APPLICATION_NAME = "Google Chrome";
 	COOKIE_NAME = "logged_in"
-	PREFSTORE =  "http://localhost:8080/";
+	PREFSTORE =  "http://www.prefstore.org/";
+	IP = "http://79.125.106.208"
 
 	//-- give the cache a one hour duration
 	CACHE_DURATION = 60 * 60;
@@ -29,7 +27,6 @@
 
 	window.localStorage.setItem( "cookie_name", COOKIE_NAME );
 	window.localStorage.setItem( "prefstore", PREFSTORE );
-	//"http://ec2-79-125-74-77.eu-west-1.compute.amazonaws.com:8080/";
 	
 	//-- initialize by parsing the extensions corresponding cookie	
 	parse_cookie()
@@ -51,14 +48,16 @@
 	
 	//-- determine whether the user is logged in
 	function parse_cookie() {
+		
 		a = chrome.cookies.get(
-			{ "url" : PREFSTORE, "name" : COOKIE_NAME },
+			{ "url" : IP, "name" : COOKIE_NAME },
 			function( cookie ) {
-			
+
 				window.localStorage.removeItem( "user_id" );
 				window.localStorage.removeItem( "screen_name" );
 				
 				if ( cookie ) {
+					console.log( "have cookie retrieved" )
 					jsonString = eval( cookie.value )
 					data = eval( '(' + jsonString + ')' )
 					
