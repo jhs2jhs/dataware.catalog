@@ -127,8 +127,12 @@ def openID_login():
     except Exception, e:
         return error( e )
     
-    redirect( url )
-
+    #Here we do a javascript redirect. A 302 redirect won't work
+    #if the calling page is within a frame (due to the requirements
+    #of some openid providers who forbid frame embedding), and the 
+    #template engine does some odd url encoding that causes problems.
+    return "<script>self.parent.location = '%s'</script>" % (url,)
+    
 
 #///////////////////////////////////////////////
 
@@ -583,8 +587,8 @@ def process_distill( user, data ) :
 
 
 @route('/static/:filename')
-def get_static_file(filename):
-    return static_file(filename, root='static/')
+def get_static_file( filename ):
+    return static_file( filename, root='static/' )
 
 
 #///////////////////////////////////////////////  
@@ -860,7 +864,12 @@ def home( ):
     else:
         user[ "registered_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "registered" ] ) )
         user[ "last_distill_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "last_distill" ] ) )
-        user[ "average_appearances" ] = round( user[ "total_term_appearances" ] / user[ "total_documents" ], 2 ) 
+        
+        if user[ "total_documents" ]:
+            user[ "average_appearances" ] = round( user[ "total_term_appearances" ] / user[ "total_documents" ], 2 )
+        else:
+            user[ "average_appearances" ] = 0
+            
         summary = prefdb.fetch_user_summary( user[ "user_id" ] )
 
     return template( 'home_page_template', user=user, summary=summary );
@@ -886,7 +895,10 @@ def summary():
 
     user[ "registered_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "registered" ] ) )
     user[ "last_distill_str" ] = time.strftime( "%d %b %Y %H:%M", time.gmtime( user[ "last_distill" ] ) )
-    user[ "average_appearances" ] = round( user[ "total_term_appearances" ] / user[ "total_documents" ], 2 ) 
+    if user[ "total_documents" ]:
+        user[ "average_appearances" ] = round( user[ "total_term_appearances" ] / user[ "total_documents" ], 2 )
+    else:
+        user[ "average_appearances" ] = 0
     summary = prefdb.fetch_user_summary( user[ "user_id" ] )
 
     return template( 'summary_page_template', user=user, summary=summary );
@@ -950,8 +962,8 @@ if __name__ == '__main__' :
     # constants
     #-------------------------------
     EXTENSION_COOKIE = "logged_in"
-    PORT = 8080
-    REALM = "http://localhost:8080"
+    PORT = 80
+    REALM = "http://www.prefstore.org"
     ROOT_PAGE = "/"
         
     #-------------------------------
