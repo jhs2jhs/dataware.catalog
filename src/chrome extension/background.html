@@ -14,7 +14,7 @@
 	DOCUMENT_TYPE = "web";
 	APPLICATION_NAME = "Google Chrome";
 	COOKIE_NAME = "logged_in"
-	COOKIE_DOMAIN = "http://79.125.106.208"
+	DOMAIN = "http://79.125.106.208"
 	PREFSTORE =  "http://www.prefstore.org/";
 
 
@@ -23,11 +23,11 @@
 	
 	//-- A list of domains that won't be parsed (predominantly search engines)
 	IGNORE_LIST = new Array( 
-		"www.bing", "www.google", "search.yahoo", "ask.com", "search.aol"
+		"www.bing", "www.google", "search.yahoo", "ask.com", "search.aol", "www.prefstore"
 	)
 
 	window.localStorage.setItem( "cookie_name", COOKIE_NAME );
-	window.localStorage.setItem( "cookie_domain", COOKIE_DOMAIN );
+	window.localStorage.setItem( "domain", DOMAIN );
 	window.localStorage.setItem( "prefstore", PREFSTORE );
 	
 	//-- initialize by parsing the extensions corresponding cookie	
@@ -52,7 +52,7 @@
 	function parse_cookie() {
 		
 		a = chrome.cookies.get(
-			{ "url" : COOKIE_DOMAIN, "name" : COOKIE_NAME },
+			{ "url" : DOMAIN, "name" : COOKIE_NAME },
 			function( cookie ) {
 
 				window.localStorage.removeItem( "user_id" );
@@ -218,12 +218,11 @@
 		var cache = window.localStorage.getItem( "cache" );
 		if ( cache == null || cache == "null" )  return true;
 		else cache = JSON.parse( cache ); 
-
 		for ( i=0; i < cache.length; i++ ) {
-			if ( cache[ i ].docId == distillation.docId ) 
+			if ( cache[ i ].docId == distillation.docId ) {
 				if ( cache[ i ].fv.length == distillation.fv.length )
-					return false;
-			
+					return false;		
+			}
 		}
 
 		return true;
@@ -243,7 +242,7 @@
 		jQuery.ajax({ 
 			type : "POST", 
 			data : data ,
-			url : PREFSTORE + "submitDistill", 
+			url : DOMAIN + "/submitDistill", 
 			cache : false,
 			timeout : 30000,
 			error : function( data ) { transmitFailure( distillation, data ); },

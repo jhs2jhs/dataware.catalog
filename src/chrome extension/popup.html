@@ -12,7 +12,7 @@
 	DIV_NAMES[ 3 ] = "loggedOutMsg";
 	PREFSTORE = window.localStorage.getItem( "prefstore" );
 	COOKIE_NAME = window.localStorage.getItem( "cookie_name" );	
-	COOKIE_DOMAIN = window.localStorage.getItem( "cookie_domain" );	
+	DOMAIN = window.localStorage.getItem( "domain" );	
 	
 	//-- Setup the global variables for the page
 	var user_id;
@@ -126,7 +126,7 @@
 	 */ 
 	function logout( provider ) {
 
-		chrome.cookies.remove({ "url" : COOKIE_DOMAIN, "name" : COOKIE_NAME }, function(info) {
+		chrome.cookies.remove({ "url" : DOMAIN, "name" : COOKIE_NAME }, function(info) {
 				user_id = window.localStorage.removeItem( "user_id" );
 				screen_name = window.localStorage.removeItem( "screen_name" );
 				refresh(300);
