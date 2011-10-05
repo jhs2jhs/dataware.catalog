@@ -935,14 +935,16 @@ if __name__ == '__main__' :
     data_log = logging.getLogger( 'data_log' )
     
     #set logging levels
-    log.setLevel( logging.DEBUG )
+    log.setLevel( logging.INFO )
     data_log.setLevel( logging.DEBUG )    
 
     # create handlers
-    ch = logging.StreamHandler()
-    fh = logging.handlers.TimedRotatingFileHandler( 
+    ch = logging.handlers.TimedRotatingFileHandler( 
         filename='logs/prefstore.log',
-
+        when='midnight', 
+        interval=21 )
+    fh = logging.handlers.TimedRotatingFileHandler( 
+        filename='logs/prefstore_data.log',
         when='midnight', 
         interval=21 )
         
@@ -983,7 +985,7 @@ if __name__ == '__main__' :
                 
     try:
         debug( True )
-        run( host='0.0.0.0', port=PORT, quiet=False )
+        run( host='0.0.0.0', port=PORT, quiet=True )
     except Exception, e:  
         log.error( "Web Server Startup failed: %s" % ( e, ) )
         exit()
