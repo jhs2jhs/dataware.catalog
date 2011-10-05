@@ -53,9 +53,6 @@ def invoke_request():
 @route( '/permit_request', method = "POST" )
 def permit_request():
 
-    #TODO: Worth checking why this takes so long to parse
-    #TODO: the input parameters into the request.forms object.
-    #TODO: Long post parameters (queries) are taking ages.   
     try:
         user_id = request.forms.get( 'user_id' )
         catalog_secret = request.forms.get( 'catalog_secret' )
@@ -522,15 +519,16 @@ def process_distill( user, data ) :
     start_processing = time.time()
     total_terms = len( fv )
     new_terms = None
-    
+
     #add the distillation to a log file for future analysis
+    #n.b. this will only work if bottle.py has been patched
     data_log.info( "%s: %s" % ( request.remote_addr, data ) ) 
-    
+
     #Remove any blacklisted terms from the feature vector
     prefdb.removeBlackListedTerms( fv )
     processed_terms = len( fv )
     total_appearances = sum( fv.values() )
-           
+
     #Process the terms we haven't seen before
     try:
         new_terms = prefdb.insertDictionaryTerms( fv )
@@ -540,7 +538,7 @@ def process_distill( user, data ) :
             % ( "prefstore" ) 
         )
         raise Exception
-    
+
     #Process the terms that already exist in the dictinoary            
     try:
         prefdb.updateTermAppearances( user_id, fv );    
@@ -759,7 +757,6 @@ def word_cloud():
         web_importance_data = ""        
         relevance_data = ""
      
-        #TODO: Should also add ability to blacklist terms at some point
         if results:
             for row in results:
                 
@@ -938,7 +935,7 @@ if __name__ == '__main__' :
     data_log = logging.getLogger( 'data_log' )
     
     #set logging levels
-    log.setLevel( logging.INFO )
+    log.setLevel( logging.DEBUG )
     data_log.setLevel( logging.DEBUG )    
 
     # create handlers
@@ -986,7 +983,7 @@ if __name__ == '__main__' :
                 
     try:
         debug( True )
-        run( host='0.0.0.0', port=PORT, quiet=True )
+        run( host='0.0.0.0', port=PORT, quiet=False )
     except Exception, e:  
         log.error( "Web Server Startup failed: %s" % ( e, ) )
         exit()
