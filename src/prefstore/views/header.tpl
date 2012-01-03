@@ -2,17 +2,12 @@
 <head>
 <title>Prefstore - Word Cloud</title>
 
-<link rel="stylesheet" type="text/css" href="./static/jqcloud.css" /> 
 <link rel="stylesheet" type="text/css" href="./static/layout.css" /> 
-
 <script type="text/javascript" src="./static/jquery-1.6.min.js"></script> 
-<script type="text/javascript" src="./static/jqcloud-0.2.4.js"></script> 
-<script type="text/javascript" src="http://www.google.com/jsapi"></script>
 
 <script>
 
-	PREFSTORE = "http://www.prefstore.org/"
-
+	
 	$( document ).ready( function() {
 		$( 'div.menu_button' ).mouseover(function() {
 			$(this).css( 'cursor', 'hand' );
@@ -31,7 +26,7 @@
 		});
 
 		$( 'div.menu_button' ).click( function() {
-			self.parent.location= PREFSTORE + $( this ).attr('id');
+			self.parent.location = "{{REALM}}/" + $( this ).attr('id');
 		});
 
 	});
@@ -66,13 +61,13 @@
 			<span class="top-menu-item">VISUALIZE</span>
 			<span class="menu-description">pretty pics</span></a> 
 		</div>
-		<div id="analysis" class="menu_button">
-			<span class="top-menu-item">ANALYSIS</span>
-			<span class="menu-description">your model</span></a> 
+		<div id="feed" class="menu_button">
+			<span class="top-menu-item">DATA FEED</span>
+			<span class="menu-description">your updates</span></a> 
 		</div>
 		<div id="summary" class="menu_button">
 			<span class="top-menu-item">SUMMARY</span>
-			<span class="menu-description">your details</span></a> 
+			<span class="menu-description">your dataware</span></a> 
 		</div>
 		<div id="home" class="menu_button">
 			<span class="top-menu-item">HOME</span>

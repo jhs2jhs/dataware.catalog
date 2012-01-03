@@ -1,5 +1,5 @@
 <!-- HEADER ------------------------------------------------------------------>
-%include header user=user
+%include header user=user, REALM=REALM
 
 <!---------------------------------------------------------------- 
 	PAGE SCRIPTS
@@ -36,18 +36,18 @@
 		</div>
 		<div style="text-align:left; font-style:italic; font-family:georgia; font-size:12px; color: #888888; margin:10px 0px 18px 7px;">
 			This seems to be the first time you have logged in. To activate your account
-			please pick a screen name, and register an email address:
+			please pick a user name, and register an email address:
 		</div>
 		<div id="loggedOutBox" >
         <form action="register" method="GET" >
 			<div style="padding:0 10 0 8; float:left; border:0px dotted; height:100px; font-size:12px; font-family:georgia; color:#555555;">
 	            <div>Screen Name:
-				%if "screen_name" in errors:
-					<span class="loginMessage"> {{errors[ "screen_name" ]}}</span>
+				%if "user_name" in errors:
+					<span class="loginMessage"> {{errors[ "user_name" ]}}</span>
 				%end
 				</div>
 		        <div>
-			        <input id="jid" class="text" name="screen_name" value="{{screen_name}}" type="text" size="37" />
+			        <input id="jid" class="text" name="user_name" value="{{user_name}}" type="text" size="37" />
 				</div>
 
 	            <div style="margin-top:5px;">

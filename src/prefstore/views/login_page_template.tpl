@@ -1,5 +1,5 @@
 <!-- HEADER ------------------------------------------------------------------>
-%include header user=user
+%include header user=user, REALM=REALM
 
 <!---------------------------------------------------------------- 
 	PAGE SCRIPTS
