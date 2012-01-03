@@ -605,7 +605,7 @@ if __name__ == '__main__' :
     try:
         db = CatalogDB()
         db.connect()
-        db.checkTables()
+        db.check_tables()
     except Exception, e:
         log.error( "Database Initialization failure: %s" % ( e, ) )
         exit()

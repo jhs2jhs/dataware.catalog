@@ -17,8 +17,8 @@ log = logging.getLogger( "console_log" )
 def safety_mysql( fn ) :
     """ I have included this decorator because there are no 
     gaurantees the user has mySQL setup so that it won't time out. 
-    If it has, this function remedies it, by trying (one shot) to
-    reconnect to the database.
+    If it does time out, this function remedies it, by trying a
+    (one shot) attempt to reconnect the database.
     """
 
     def wrapper( self, *args, **kwargs ) :
@@ -185,7 +185,7 @@ class CatalogDB( object ):
     
     
     @safety_mysql        
-    def checkTables( self ):
+    def check_tables( self ):
         
         log.info( "%s: checking system table integrity..." % self.name );
         
@@ -213,13 +213,13 @@ class CatalogDB( object ):
         tables = [ row[ "table_name" ] for row in self.cursor.fetchall() ]
         
         if not self.TBL_CATALOG_USERS in tables : 
-            self.createTable( self.TBL_CATALOG_USERS )
+            self.create_table( self.TBL_CATALOG_USERS )
         if not self.TBL_CATALOG_CLIENTS in tables : 
-            self.createTable( self.TBL_CATALOG_CLIENTS )             
+            self.create_table( self.TBL_CATALOG_CLIENTS )             
         if not self.TBL_CATALOG_RESOURCES in tables : 
-            self.createTable( self.TBL_CATALOG_RESOURCES )
+            self.create_table( self.TBL_CATALOG_RESOURCES )
         if not self.TBL_CATALOG_REQUESTS in tables : 
-            self.createTable( self.TBL_CATALOG_REQUESTS )
+            self.create_table( self.TBL_CATALOG_REQUESTS )
                      
         self.commit();
         
@@ -228,7 +228,7 @@ class CatalogDB( object ):
     
     
     @safety_mysql                  
-    def createTable( self, tableName ):
+    def create_table( self, tableName ):
         
         log.warning( 
             "%s: missing system table detected: '%s'" 
