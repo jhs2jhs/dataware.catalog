@@ -457,10 +457,10 @@ class AuthorizationModule( object ) :
         else: 
             try:
                 #if there is a problem we should have been sent a cause
-                cause = output[ "error" ][ "message" ]
+                cause = "%s: %s" % ( output[ "error" ], output[ "error_description" ], )
             except:
                 #if not simply report that we don't know what has gone awry
-                cause= "Unknown problems accepting request."
+                cause = "Unknown problems accepting request."
         
         #if we have reached here something has gone wrong - report it        
         raise RegistrationException( cause )
