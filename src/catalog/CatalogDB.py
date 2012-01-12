@@ -41,10 +41,13 @@ class CatalogDB( object ):
     ''' classdocs '''
     
     DB_NAME = 'catalog'
-    TBL_CATALOG_REQUESTS = 'tblCatalogRequests'
+    
     TBL_CATALOG_USERS = 'tblCatalogUsers'
-    TBL_CATALOG_CLIENTS = 'tblCatalogClients'    
+    TBL_CATALOG_CLIENTS = 'tblCatalogClients'
     TBL_CATALOG_RESOURCES = 'tblCatalogResources'
+    TBL_CATALOG_INSTALLS = 'tblCatalogInstalls'    
+    TBL_CATALOG_REQUESTS = 'tblCatalogRequests'
+    
     CONFIG_FILE = "catalog.cfg"
     SECTION_NAME = "CatalogDB"
     
@@ -56,65 +59,85 @@ class CatalogDB( object ):
                
         TBL_CATALOG_USERS : """
             CREATE TABLE %s.%s (
-            user_id varchar(256) NOT NULL,
-            user_name varchar(64),
-            email varchar(256),
-            registered int(10) unsigned,            
-            PRIMARY KEY (user_id), UNIQUE KEY `UNIQUE` (`user_name`) )
-            ENGINE=InnoDB DEFAULT CHARSET=latin1;
+                user_id varchar(256) NOT NULL,
+                user_name varchar(64),
+                email varchar(256),
+                registered int(10) unsigned,            
+                PRIMARY KEY (user_id), UNIQUE KEY `UNIQUE` (`user_name`) 
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
         """  % ( DB_NAME, TBL_CATALOG_USERS ),
         
         
         TBL_CATALOG_RESOURCES : """
             CREATE TABLE %s.%s (
-            user_id varchar(256) NOT NULL,
-            resource_id varchar(256) NOT NULL,
-            resource_name varchar(256) NOT NULL,
-            resource_uri varchar(256) NOT NULL,            
-            shared_secret varchar(256) NOT NULL,            
-            registered int(10) unsigned,            
-            PRIMARY KEY (user_id, resource_id) )
-            ENGINE=InnoDB DEFAULT CHARSET=latin1;
-        """  % ( DB_NAME, TBL_CATALOG_RESOURCES ),
+                resource_id varchar(256) NOT NULL,
+                resource_name varchar(128) NOT NULL,
+                redirect_uri varchar(256) DEFAULT NULL,
+                description varchar(1024) DEFAULT NULL,
+                logo_uri varchar(256) DEFAULT NULL,
+                web_uri varchar(256) DEFAULT NULL,
+                namespace varchar(45) DEFAULT NULL,
+                registered int(10) unsigned NOT NULL, 
+                PRIMARY KEY (resource_id),
+                UNIQUE KEY `UNIQUE` (resource_name) 
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+        """  % ( DB_NAME, TBL_CATALOG_RESOURCES), 
 
 
+        TBL_CATALOG_INSTALLS: """
+            CREATE TABLE %s.%s (
+                user_id varchar(256) NOT NULL,
+                resource_id varchar(256) NOT NULL,
+                state varchar(256),
+                redirect_uri varchar(256) NOT NULL,            
+                expiry_time int(10) unsigned NOT NULL,
+                access_token varchar(256),
+                auth_code varchar(256),
+                created int(10) unsigned,
+                ctime int(10) unsigned,     
+                PRIMARY KEY (user_id, resource_id), 
+                FOREIGN KEY (resource_id) REFERENCES %s(resource_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;            
+        """  % ( DB_NAME, TBL_CATALOG_INSTALLS, TBL_CATALOG_RESOURCES ),
+        
+        
         TBL_CATALOG_CLIENTS : """
             CREATE TABLE %s.%s (
-            client_id varchar(256) NOT NULL,
-            client_name varchar(128) NOT NULL,
-            redirect_uri varchar(256) DEFAULT NULL,
-            description varchar(1024) DEFAULT NULL,
-            logo_uri varchar(256) DEFAULT NULL,
-            web_uri varchar(256) DEFAULT NULL,
-            namespace varchar(45) DEFAULT NULL,
-            registered int(10) unsigned NOT NULL, 
-            PRIMARY KEY (client_id),
-            UNIQUE KEY `UNIQUE` (client_name) ) 
-            ENGINE=InnoDB DEFAULT CHARSET=latin1;
+                client_id varchar(256) NOT NULL,
+                client_name varchar(128) NOT NULL,
+                redirect_uri varchar(256) DEFAULT NULL,
+                description varchar(1024) DEFAULT NULL,
+                logo_uri varchar(256) DEFAULT NULL,
+                web_uri varchar(256) DEFAULT NULL,
+                namespace varchar(45) DEFAULT NULL,
+                registered int(10) unsigned NOT NULL, 
+                PRIMARY KEY (client_id),
+                UNIQUE KEY `UNIQUE` (client_name) 
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
         """  % ( DB_NAME, TBL_CATALOG_CLIENTS),  
         
         
         TBL_CATALOG_REQUESTS : """
             CREATE TABLE %s.%s (
-            request_id int(10) unsigned NOT NULL AUTO_INCREMENT,
-            user_id varchar(256) NOT NULL,
-            client_id varchar(256) NOT NULL,
-            state varchar(256),
-            resource_id varchar(256) NOT NULL,
-            redirect_uri varchar(256) NOT NULL,            
-            expiry_time int(10) unsigned NOT NULL,
-            query text NOT NULL,
-            checksum varchar(256) NOT NULL,
-            request_status varchar(32) NOT NULL,
-            access_token varchar(256),
-            auth_code varchar(256),
-            created int(10) unsigned,
-            ctime int(10) unsigned,     
-            PRIMARY KEY (request_id), 
-            FOREIGN KEY (user_id, resource_id) REFERENCES %s(user_id, resource_id),
-            UNIQUE KEY `UNIQUE` (user_id, client_id, checksum) )
-            ENGINE=InnoDB DEFAULT CHARSET=latin1;
-        """  % ( DB_NAME, TBL_CATALOG_REQUESTS, TBL_CATALOG_RESOURCES ),      
+                request_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+                user_id varchar(256) NOT NULL,
+                client_id varchar(256) NOT NULL,
+                state varchar(256),
+                resource_id varchar(256) NOT NULL,
+                redirect_uri varchar(256) NOT NULL,            
+                expiry_time int(10) unsigned NOT NULL,
+                query text NOT NULL,
+                checksum varchar(256) NOT NULL,
+                request_status varchar(32) NOT NULL,
+                access_token varchar(256),
+                auth_code varchar(256),
+                created int(10) unsigned,
+                ctime int(10) unsigned,     
+                PRIMARY KEY (request_id),
+                UNIQUE KEY `UNIQUE` (user_id, client_id, checksum), 
+                FOREIGN KEY (user_id, resource_id) REFERENCES %s(user_id, resource_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+        """  % ( DB_NAME, TBL_CATALOG_REQUESTS, TBL_CATALOG_INSTALLS ),      
     } 
     
         
@@ -193,57 +216,30 @@ class CatalogDB( object ):
         self.cursor.execute ( """
             SELECT 1
             FROM information_schema.`SCHEMATA`
-            WHERE schema_name='%s'
-        """ % self.DB_NAME )
+            WHERE schema_name='%s' """ % self.DB_NAME )
                 
         row = self.cursor.fetchone()
-
         if ( row is None ):
             log.info( "%s: database does not exist - creating..." % self.name );    
             self.cursor.execute ( "CREATE DATABASE catalog" )
         
-        
-        #-- then check it is populated with the required tables
+        #then check it is populated with the required tables
         self.cursor.execute ( """
             SELECT table_name
             FROM information_schema.`TABLES`
-            WHERE table_schema='%s'
-        """ % self.DB_NAME )
+            WHERE table_schema='%s' """ % self.DB_NAME )
         
         tables = [ row[ "table_name" ] for row in self.cursor.fetchall() ]
         
-        if not self.TBL_CATALOG_USERS in tables : 
-            self.create_table( self.TBL_CATALOG_USERS )
-        if not self.TBL_CATALOG_CLIENTS in tables : 
-            self.create_table( self.TBL_CATALOG_CLIENTS )             
-        if not self.TBL_CATALOG_RESOURCES in tables : 
-            self.create_table( self.TBL_CATALOG_RESOURCES )
-        if not self.TBL_CATALOG_REQUESTS in tables : 
-            self.create_table( self.TBL_CATALOG_REQUESTS )
-                     
-        self.commit();
+        #if they don't exist for some reason, create them.    
+        for t, q in self.createQueries.iteritems():
+            if not t in tables : 
+                log.warning( "%s: Creating missing system table: '%s'" % ( self.name, t ) );
+                self.cursor.execute( q )
+        
+        self.commit()
         
         
-    #///////////////////////////////////////
-    
-    
-    @safety_mysql                  
-    def create_table( self, tableName ):
-        
-        log.warning( 
-            "%s: missing system table detected: '%s'" 
-            % ( self.name, tableName ) 
-        );
-        
-        if tableName in self.createQueries :
-            
-            log.info( 
-                "%s: --- creating system table '%s' " 
-                % ( self.name, tableName )
-            );  
-
-            self.cursor.execute( self.createQueries[ tableName ] )
-
     #////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -294,7 +290,58 @@ class CatalogDB( object ):
         self.cursor.execute( query, ( client_name, ) )
         return self.cursor.fetchone()   
                       
-                      
+  
+    #////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    @safety_mysql   
+    def insert_resource_registration( self, resource_id, resource_name,
+        redirect_uri, description, logo_uri, web_uri, namespace):
+       
+        query = """
+             INSERT INTO %s.%s VALUES ( %s, %s, %s, %s, %s, %s, %s, %s )
+        """  % ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, 
+                 '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', ) 
+         
+        #client_id, user_id and checksum must be unique, to prevent duplicate queries
+        self.cursor.execute( 
+            query, ( 
+                resource_id,
+                resource_name,
+                redirect_uri, 
+                description, 
+                logo_uri, 
+                web_uri,
+                namespace,
+                time.time()
+            ) 
+        )
+
+        
+    #///////////////////////////////////////
+
+
+    @safety_mysql                
+    def fetch_resource_by_id( self, resource_id ) :
+        if not resource_id: return None
+        query = "SELECT * FROM %s.%s WHERE resource_id = %s" % \
+            ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, '%s', )
+        self.cursor.execute( query, ( resource_id, ) )
+        return self.cursor.fetchone()
+        
+    
+    #///////////////////////////////////////
+
+
+    @safety_mysql                
+    def fetch_resource_by_name( self, resource_name ) :
+        if not resource_name: return None
+        query = "SELECT * FROM %s.%s WHERE resource_name = %s" % \
+            ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, '%s', )
+        self.cursor.execute( query, ( resource_name, ) )
+        return self.cursor.fetchone()   
+    
+    
     #////////////////////////////////////////////////////////////////////////////////////////////
 
 

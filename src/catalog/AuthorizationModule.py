@@ -185,22 +185,70 @@ class AuthorizationModule( object ) :
     #///////////////////////////////////////////////
     
     
-    def client_registration( self, client_name, redirect_uri,
+    def resource_register( self, resource_name, redirect_uri,
+        description, logo_uri, web_uri, namespace ):
+       
+        
+        if ( resource_name is None or redirect_uri is None ) :
+            return self.format_submission_failure(
+                "catalog_denied", 
+                "A valid resource_name and redirect_uri must be provided" )
+        
+        #check that the user_id exists and is valid
+        resource = self.db.fetch_resource_by_name( resource_name )
+
+        if ( resource ) :        
+            return self.format_submission_failure(
+                "catalog_denied",                
+                "A resource with that name already exists in the catalog" ) 
+
+        try:
+            resource_id = self.generateAuthorizationCode()
+
+            self.db.insert_resource_registration( 
+                resource_id = resource_id,                                    
+                resource_name = resource_name,
+                redirect_uri = redirect_uri,
+                description = description,
+                logo_uri = logo_uri,
+                web_uri = web_uri,
+                namespace = namespace,
+            )
+
+            self.db.commit()
+
+            json_response = { 
+                'success': True,
+                'resource_id': resource_id
+            } 
+        
+            return json.dumps( json_response );                
+            
+         
+        except:    
+            return self.format_submission_failure(
+                "catalog_problems",                
+                "Database problems are currently being experienced at the catalog"
+            ) 
+            
+            
+    #///////////////////////////////////////////////
+    
+    
+    def client_register( self, client_name, redirect_uri,
         description, logo_uri, web_uri, namespace ):
        
         if ( client_name is None or redirect_uri is None ) :
             return self.format_submission_failure(
-                "registration_denied", "catalog_denied",
-                "A valid client_name redirect_uri must be provided"
-            )
+                "catalog_denied",  
+                "A valid client_name and redirect_uri must be provided" )
         
         #check that the user_id exists and is valid
         client = self.db.fetch_client_by_name( client_name )
         if ( client ) :        
             return self.format_submission_failure(
-                "registration_denied", "catalog_denied",                
-                "A client with that name already exists in the catalog"
-            ) 
+                "catalog_denied",
+                "A client with that name already exists in the catalog" ) 
         
         try:
             client_id = self.generateAuthorizationCode()
@@ -227,7 +275,7 @@ class AuthorizationModule( object ) :
          
         except:    
             return self.format_submission_failure(
-                "registration_denied", "catalog_problems",                
+                "catalog_problems",                
                 "Database problems are currently being experienced at the catalog"
             ) 
         

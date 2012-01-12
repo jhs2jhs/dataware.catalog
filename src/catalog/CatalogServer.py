@@ -5,13 +5,13 @@ Created on 12 April 2011
 
 from __future__ import division
 from bottle import * #@UnusedWildImport
-import logging
-import AuthorizationModule
-import OpenIDManager
-from CatalogDB import *
 import json
+import logging
 import urllib
 
+import OpenIDManager
+import AuthorizationModule
+from CatalogDB import *  #@UnusedWildImport
 
 #//////////////////////////////////////////////////////////
 # CONSTANTS
@@ -153,8 +153,39 @@ def set_authentication_cookie( user_id, user_name = None ):
 # CATALOG SPECIFIC WEB-API CALLS
 #//////////////////////////////////////////////////////////
 
-@route( '/client_registration', method = "POST" )
-def client_registration():
+
+
+@route( '/resource_register', method = "POST" )
+def resource_register():
+    resource_name = request.forms.get( 'resource_name' )   
+    redirect_uri = request.forms.get( 'redirect_uri' )
+    description = request.forms.get( 'description' )
+    logo_uri = request.forms.get( 'logo_uri' )
+    web_uri = request.forms.get( 'web_uri' )
+    namespace = request.forms.get( 'namespace' )
+        
+    result = am.resource_register( 
+        resource_name = resource_name,
+        redirect_uri = redirect_uri,
+        description = description,
+        logo_uri = logo_uri,
+        web_uri = web_uri,
+        namespace = namespace,
+    )
+    
+    log.debug( 
+        "Catalog_server: Resource Registration for client '%s': %s" 
+        % ( resource_name, result ) 
+    )
+        
+    return result    
+    
+   
+#//////////////////////////////////////////////////////////
+
+
+@route( '/client_register', method = "POST" )
+def client_register():
     client_name = request.forms.get( 'client_name' )   
     redirect_uri = request.forms.get( 'redirect_uri' )
     description = request.forms.get( 'description' )
@@ -162,7 +193,7 @@ def client_registration():
     web_uri = request.forms.get( 'web_uri' )
     namespace = request.forms.get( 'namespace' )
         
-    result = am.client_registration( 
+    result = am.client_register( 
         client_name = client_name,
         redirect_uri = redirect_uri,
         description = description,
