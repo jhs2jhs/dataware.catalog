@@ -235,7 +235,7 @@ class AuthorizationModule( object ) :
     #///////////////////////////////////////////////
         
         
-    def processing_request( self, 
+    def client_request( self, 
         user_name, client_id, state, 
         redirect_uri, json_scope ):
         
@@ -343,7 +343,7 @@ class AuthorizationModule( object ) :
 
             #contact the resource provider and fetch the access token  
             try:    
-                access_token = self.register_request( access_request )
+                access_token = self.permit_request( access_request )
             except RegistrationException, e:
                 #the request has been rejected by the resource_provider
                 #so we have to return a failure redirect url and mop up
@@ -392,7 +392,7 @@ class AuthorizationModule( object ) :
     #///////////////////////////////////////////////
     
       
-    def register_request( self, request ):
+    def permit_request( self, request ):
         """
             Once the user has accepted an authorization request, the catalog
             must check that the resource provider is happy to permit the query 
@@ -410,7 +410,7 @@ class AuthorizationModule( object ) :
             }
         )
 
-        url = "%s/register_request" % ( request[ "resource_uri" ], )
+        url = "%s/permit_request" % ( request[ "resource_uri" ], )
 
         #if necessary setup a proxy
         if ( self._WEB_PROXY ):

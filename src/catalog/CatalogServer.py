@@ -182,15 +182,15 @@ def client_registration():
 #//////////////////////////////////////////////////////////
 
     
-@route( '/user/:user_name/processing_request', method = "POST" )
-def processing_request( user_name = None ):
+@route( '/user/:user_name/client_request', method = "POST" )
+def client_request( user_name = None ):
 
     client_id = request.forms.get( 'client_id' )
     state = request.forms.get( 'state' )
     redirect_uri = request.forms.get( 'redirect_uri' )
     json_scope = request.forms.get( 'scope' )
     
-    result = am.processing_request( 
+    result = am.client_request( 
         user_name = user_name,
         client_id = client_id,
         state = state,
@@ -209,8 +209,8 @@ def processing_request( user_name = None ):
 #//////////////////////////////////////////////////////////
  
 
-@route( '/authorize_request', method = "POST" )
-def authorize_request():
+@route( '/authorize_client', method = "POST" )
+def authorize_client():
     
     #by this point the user has authenticated and will have
     #a cookie identifying themselves. This is used to extract
@@ -268,8 +268,8 @@ def access():
 #//////////////////////////////////////////////////////////   
       
 
-@route( '/reject_request', method = "POST" )
-def reject_request():
+@route( '/reject_client', method = "POST" )
+def reject_client():
     
     try:
         user = check_login()
