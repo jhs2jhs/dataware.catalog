@@ -277,9 +277,9 @@ class AuthorizationModule( object ) :
             return self.format_submission_failure(
                 "catalog_problems",                
                 "Database problems are currently being experienced at the catalog"
-            ) 
-        
+            )
     
+        
     #///////////////////////////////////////////////
         
         
@@ -354,8 +354,7 @@ class AuthorizationModule( object ) :
             return self.format_submission_failure(
                 "server_error", "Database problems are currently being experienced"
             ) 
-    
-      
+     
                 
     #///////////////////////////////////////////////
     

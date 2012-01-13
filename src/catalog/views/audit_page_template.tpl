@@ -37,7 +37,6 @@
 
 	////////////////////////////////////////////////////
 
-
 	function error_box( error ) {
 		msg = "<span class='error_box'>ERROR:</span>&nbsp;&nbsp;" + error
 		$.prompt( msg,  {  buttons: { Continue: true }, } )

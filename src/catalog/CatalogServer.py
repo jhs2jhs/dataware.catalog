@@ -39,6 +39,16 @@ class std_writer( object ):
 @route( '/login', method = "GET" )
 def openID_login():
 
+    try:
+        params = "resource_id=%s&redirect_uri=%s&state=%s" % \
+            ( request.GET[ "resource_id" ],
+              request.GET[ "redirect_uri" ], 
+              request.GET[ "state" ], )
+    except:
+        params = ""
+    
+    print params
+    
     try: 
         username = request.GET[ 'username' ]    
     except: 
@@ -47,18 +57,20 @@ def openID_login():
     try:      
         provider = request.GET[ 'provider' ]
     except: 
-        return template( 'login_page_template', REALM=REALM, user=None )
-    
+        return template( 
+            'login_page_template', 
+            REALM=REALM, user=None, params=params )    
     try:
         url = OpenIDManager.process(
             realm=REALM,
-            return_to=REALM + "/checkauth",
+            return_to=REALM + "/checkauth?" + urllib.quote( params ),
             provider=provider,
             username=username
         )
     except Exception, e:
         return error( e )
     
+    print url
     #Here we do a javascript redirect. A 302 redirect won't work
     #if the calling page is within a frame (due to the requirements
     #of some openid providers who forbid frame embedding), and the 
@@ -107,7 +119,16 @@ def authenticate():
     else:
         delete_authentication_cookie()
         
-    return "<script>self.parent.location = '%s'</script>" % ( REALM + ROOT_PAGE,)
+    try:
+        redirect_uri = "resource_request?resource_id=%s&redirect_uri=%s&state=%s" % \
+            ( request.GET[ "resource_id" ], 
+              request.GET[ "redirect_uri" ], 
+              request.GET[ "state" ] )
+    except:
+        redirect_uri = REALM + ROOT_PAGE
+    
+    print redirect_uri
+    return "<script>self.parent.location = '%s'</script>" % ( redirect_uri, )
        
                 
 #///////////////////////////////////////////////
@@ -153,8 +174,8 @@ def set_authentication_cookie( user_id, user_name = None ):
 # CATALOG SPECIFIC WEB-API CALLS
 #//////////////////////////////////////////////////////////
 
-
-
+   
+#TODO: make sure that redirect uri's don't have a / on the end
 @route( '/resource_register', method = "POST" )
 def resource_register():
     resource_name = request.forms.get( 'resource_name' )   
@@ -180,7 +201,84 @@ def resource_register():
         
     return result    
     
-   
+    
+#//////////////////////////////////////////////////////////
+
+    
+@route( '/resource_request', method = "GET" )
+def resource_request( user_name = None ):
+
+    #first check that required parameters have beeing supplied
+    try: 
+        resource_id = request.GET[ "resource_id" ]
+        redirect_uri = request.GET[ "redirect_uri" ]
+        state = request.GET[ "state" ]
+    except:
+        return template( 'resource_request_error_template', 
+           error = "The resource has not supplied the right parameters." 
+        );
+
+    #Then check that the resource has registered
+    resource = db.fetch_resource_by_id( resource_id ) 
+    if ( not resource ):
+        return template( 'resource_request_error_template', 
+           error = "Resource isn't registered with us, so cannot install."
+        );
+    
+    #And finally check that it has supplied the correct credentials
+    if ( resource[ "redirect_uri" ] != redirect_uri ):
+        return template( 'resource_request_error_template', 
+           error = "The resource has supplied incorrect credentials."
+        );
+
+    try:
+        user = check_login()
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return error( e.msg )
+    except Exception, e:
+        return error( e ) 
+
+    return template( 'resource_request_template', 
+        user=user,
+        state=1234,
+        resource=resource
+    );
+
+
+#//////////////////////////////////////////////////////////
+ 
+
+@route( '/resource_authorize', method = "POST" )
+def resource_authorize():
+    
+    try:
+        user = check_login()
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return error( e.msg )
+    except Exception, e:
+        return error( e ) 
+    
+    request_id = request.forms.get( 'request_id' )
+
+    url = am.authorize_request( 
+        user_id = user[ "user_id" ],
+        request_id = request_id,
+    )
+
+    log.debug( 
+        "Catalog_server: Authorization Request from %s for request %s completed" 
+        % ( user[ "user_id"], request_id ) 
+    )
+
+    return url
+
+    
+    
+#//////////////////////////////////////////////////////////
 #//////////////////////////////////////////////////////////
 
 
@@ -230,7 +328,7 @@ def client_request( user_name = None ):
     )
     
     log.debug( 
-        "Catalog_server: Access Request from %s to %s: %s" 
+        "Catalog_server: Client Request from %s to %s: %s" 
         % ( client_id, user_name, result ) 
     )
         
@@ -240,8 +338,8 @@ def client_request( user_name = None ):
 #//////////////////////////////////////////////////////////
  
 
-@route( '/authorize_client', method = "POST" )
-def authorize_client():
+@route( '/client_client', method = "POST" )
+def client_authorize():
     
     #by this point the user has authenticated and will have
     #a cookie identifying themselves. This is used to extract
@@ -510,7 +608,7 @@ def check_login():
 
     #first try and extract the user_id from the cookie. 
     #n.b. this can generate LoginExceptions
-    user_id =extract_user_id()
+    user_id = extract_user_id()
     
     if ( user_id ) :
         
@@ -555,42 +653,8 @@ def home( ):
         return error( e )  
     
     return template( 'home_page_template', REALM=REALM, user=user );
-    
-    
-#///////////////////////////////////////////////  
-    
-    
-@route('/audit')
-def audit():
-    
-    PREVIEW_ROWS = 10
-    
-    try:
-        user = check_login()
-        if ( not user ) : redirect( ROOT_PAGE ) 
-    except RegisterException, e:
-        redirect( "/register" ) 
-    except LoginException, e:
-        return error( e.msg )
-    except Exception, e:
-        return error( e )  
-    
-    requests = db.fetch_requests( user[ "user_id" ] )
-    
-    for request in requests:
-        try:
-            index = [ m.start() for m in re.finditer( r"\n", request[ "query" ]) ][ PREVIEW_ROWS ]
-            request[ "preview" ] = "%s\n..." % request[ "query" ][ 0:index ]
-        except:
-            request[ "preview" ] = request[ "query" ]
-        
-    return template( 
-        'audit_page_template', 
-        REALM=REALM, 
-        user=user, 
-        requests=requests
-    );
-
+       
+ 
     
 #//////////////////////////////////////////////////////////
       

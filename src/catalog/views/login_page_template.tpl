@@ -9,7 +9,7 @@
 	 * Function that redirects the user to the server's openid login
 	 */ 
 	function login( provider ) {
-		window.open( "login?provider=" + provider, "_self" )
+		window.open( "login?provider=" + provider + "&{{params}}", "_self" )
 	}
 
 </script>
