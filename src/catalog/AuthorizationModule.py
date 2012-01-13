@@ -355,11 +355,68 @@ class AuthorizationModule( object ) :
                 "server_error", "Database problems are currently being experienced"
             ) 
      
-                
     #///////////////////////////////////////////////
     
     
-    def authorize_request( self, user_id, request_id ):
+    def resource_authorize( self, user, resource_id, redirect_uri, state ):
+        
+
+        try:   
+            if not ( user ) :        
+                return self.format_failure( 
+                    "A valid user ID and has not been provided." )
+
+            if not ( resource_id ) :
+                return self.format_failure( 
+                    "A valid resource ID and has not been provided." )   
+
+            #check that the resource has been registered
+            resource = self.db.fetch_resource_by_id( resource_id )
+            if not ( resource ) :
+                return self.format_failure( 
+                    "The resource has not been registered, and so cannot be installed." ) 
+
+            if not ( resource[ "redirect_uri" ] == redirect_uri ) :
+                return self.format_failure( 
+                    "Incorrect resource credentials have been supplied." ) 
+
+            #check that the user hasn't already been installed the resource
+            if( self.db.fetch_install( user[ "user_id" ], resource_id ) ):
+                return self.format_failure( 
+                    "You have already installed this resource." ) 
+
+            #all is well so create some access_token and authorization codes
+            #register the request as having been updated.
+            access_token = self.generateAuthorizationCode()
+            auth_code = self.generateAuthorizationCode()
+            
+            self.db.insert_install( 
+                user[ "user_id" ],
+                resource_id, 
+                state,
+                access_token,
+                auth_code                
+            )
+            
+            self.db.commit()
+            
+            #the request has been accepted so return a success redirect url
+            return self.format_auth_success(
+                 redirect_uri,  
+                 state, 
+                 auth_code
+            )                            
+
+        except:
+            return self.format_failure( 
+                "Server is currently experiencing undetermined problems. \
+                Please try again later." )    
+    
+               
+    #///////////////////////////////////////////////
+    
+    
+    def client_authorize( self, user_id, request_id ):
         
         try:
             #check that the user_id exists and is valid
@@ -378,7 +435,7 @@ class AuthorizationModule( object ) :
 
             if not ( access_request ) :
                 return self.format_failure( 
-                    "The request you are trying to reject does not exist." ) 
+                    "The request you are trying to authorize does not exist." ) 
             
             if not ( access_request[ "user_id" ] == user_id ) :
                 return self.format_failure( 

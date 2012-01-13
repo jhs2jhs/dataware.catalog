@@ -178,6 +178,7 @@ def set_authentication_cookie( user_id, user_name = None ):
 #TODO: make sure that redirect uri's don't have a / on the end
 @route( '/resource_register', method = "POST" )
 def resource_register():
+    
     resource_name = request.forms.get( 'resource_name' )   
     redirect_uri = request.forms.get( 'redirect_uri' )
     description = request.forms.get( 'description' )
@@ -242,7 +243,7 @@ def resource_request( user_name = None ):
 
     return template( 'resource_request_template', 
         user=user,
-        state=1234,
+        state=state,
         resource=resource
     );
 
@@ -262,28 +263,32 @@ def resource_authorize():
     except Exception, e:
         return error( e ) 
     
-    request_id = request.forms.get( 'request_id' )
+    resource_id = request.forms.get( 'resource_id' )   
+    redirect_uri = request.forms.get( 'redirect_uri' )
+    state = request.forms.get( 'state' )  
 
-    url = am.authorize_request( 
-        user_id = user[ "user_id" ],
-        request_id = request_id,
+    result = am.resource_authorize( 
+        user,
+        resource_id = resource_id,
+        redirect_uri = redirect_uri,
+        state = state,
     )
 
     log.debug( 
-        "Catalog_server: Authorization Request from %s for request %s completed" 
-        % ( user[ "user_id"], request_id ) 
+        "Catalog_server: Resource Authorization Request from %s for %s completed" 
+        % ( user[ "user_id" ], resource_id ) 
     )
 
-    return url
+    print result
+    return result
 
-    
-    
-#//////////////////////////////////////////////////////////
+
 #//////////////////////////////////////////////////////////
 
 
 @route( '/client_register', method = "POST" )
 def client_register():
+    
     client_name = request.forms.get( 'client_name' )   
     redirect_uri = request.forms.get( 'redirect_uri' )
     description = request.forms.get( 'description' )
@@ -361,7 +366,7 @@ def client_authorize():
     
     request_id = request.forms.get( 'request_id' )
 
-    url = am.authorize_request( 
+    url = am.client_authorize( 
         user_id = user[ "user_id" ],
         request_id = request_id,
     )

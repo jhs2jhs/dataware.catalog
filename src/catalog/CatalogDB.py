@@ -89,8 +89,6 @@ class CatalogDB( object ):
                 user_id varchar(256) NOT NULL,
                 resource_id varchar(256) NOT NULL,
                 state varchar(256),
-                redirect_uri varchar(256) NOT NULL,            
-                expiry_time int(10) unsigned NOT NULL,
                 access_token varchar(256),
                 auth_code varchar(256),
                 created int(10) unsigned,
@@ -316,13 +314,52 @@ class CatalogDB( object ):
                 time.time()
             ) 
         )
+        
+        
+    #////////////////////////////////////////////////////////////////////////////////////////////
+    
+    @safety_mysql   
+    def insert_install( self, user_id, resource_id,
+        state, access_token, auth_code ):
 
+        query = """
+             INSERT INTO %s.%s VALUES ( %s, %s, %s, %s, %s, %s, %s )
+        """  % ( self.DB_NAME, self.TBL_CATALOG_INSTALLS, 
+                 '%s', '%s', '%s', '%s', '%s', '%s', '%s', ) 
+        
+        #client_id, user_id and checksum must be unique, to prevent duplicate queries
+        self.cursor.execute( 
+            query, ( 
+                user_id,
+                resource_id,
+                state, 
+                access_token, 
+                auth_code, 
+                time.time(),
+                time.time(),                
+            ) 
+        )
+        
+        
+    #///////////////////////////////////////
+
+
+    @safety_mysql                
+    def fetch_install( self, user_id, resource_id ) :
+        
+        if not resource_id: return None
+        query = "SELECT * FROM %s.%s WHERE user_id = %s AND resource_id = %s" % \
+            ( self.DB_NAME, self.TBL_CATALOG_INSTALLS, '%s', '%s' )
+        self.cursor.execute( query, ( user_id, resource_id, ) )
+        return self.cursor.fetchone()
+    
         
     #///////////////////////////////////////
 
 
     @safety_mysql                
     def fetch_resource_by_id( self, resource_id ) :
+        
         if not resource_id: return None
         query = "SELECT * FROM %s.%s WHERE resource_id = %s" % \
             ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, '%s', )
@@ -335,6 +372,7 @@ class CatalogDB( object ):
 
     @safety_mysql                
     def fetch_resource_by_name( self, resource_name ) :
+        
         if not resource_name: return None
         query = "SELECT * FROM %s.%s WHERE resource_name = %s" % \
             ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, '%s', )

@@ -38,9 +38,10 @@
 			url: "/resource_authorize",
 			data: 'resource_id={{resource["resource_id"]}}&state={{state}}&redirect_uri={{resource["redirect_uri"]}}',
 			success: function( data, status  ) {
+
 				data = eval( '(' + data + ')' );
 				if ( data.success ) {
-					window.location = '{{resource["redirect_uri"]}}?state={{state}}&code=' + data.code;
+					window.location = data.redirect;
 				} else {
 					error_box( data.error );
 				}
@@ -54,6 +55,7 @@
 	////////////////////////////////////////////////////
 
 	function reject_resource( error ) {
+
 		window.location.href =  
 			'{{resource["redirect_uri"]}}' +
 			'?state={{state}}' +
