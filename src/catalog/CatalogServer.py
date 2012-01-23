@@ -279,7 +279,6 @@ def resource_authorize():
         % ( user[ "user_id" ], resource_id ) 
     )
 
-    print result
     return result
 
 
@@ -687,17 +686,16 @@ if __name__ == '__main__' :
     # redirect standard outputs
     sys.stdout = std_writer( "stdout" )
     sys.stderr = std_writer( "stderr" )
-    
-    
+       
     #-------------------------------
     # constants
     #-------------------------------
     EXTENSION_COOKIE = "logged_in"
-    PORT = 80
-    REALM = "http://localhost:80"
+    PORT = 8080
+    REALM = "http://www.prefstore.org:8080" 
     ROOT_PAGE = "/"
-    WEB_PROXY = "http://mainproxy.nottingham.ac.uk:8080"
-
+    #LOCAL! REALM = "http://localhost:8080"
+    #LOCAL! WEB_PROXY = "http://mainproxy.nottingham.ac.uk:8080"
 
     #-------------------------------
     # initialization
@@ -711,7 +709,7 @@ if __name__ == '__main__' :
         exit()
         
     try:    
-        am = AuthorizationModule.AuthorizationModule( db, WEB_PROXY )
+        am = AuthorizationModule.AuthorizationModule( db )
     except Exception, e:
         log.error( "Authorization Module failure: %s" % ( e, ) )
         exit()
