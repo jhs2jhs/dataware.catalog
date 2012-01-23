@@ -16,7 +16,6 @@ import random
 #setup logger for this module
 log = logging.getLogger( "console_log" )
 
-
 #///////////////////////////////////////////////
 
 
@@ -359,8 +358,7 @@ class AuthorizationModule( object ) :
     
     
     def resource_authorize( self, user, resource_id, redirect_uri, state ):
-        
-
+       
         try:   
             if not ( user ) :        
                 return self.format_failure( 
@@ -519,8 +517,8 @@ class AuthorizationModule( object ) :
         #if necessary setup a proxy
         if ( self._WEB_PROXY ):
             proxy = urllib2.ProxyHandler( self._WEB_PROXY )
-            opener = urllib2.build_opener(proxy)
-            urllib2.install_opener(opener)
+            opener = urllib2.build_opener( proxy )
+            urllib2.install_opener( opener )
         
         #first communicate with the resource provider   
         try:
