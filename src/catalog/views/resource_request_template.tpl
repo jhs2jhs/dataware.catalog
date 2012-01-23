@@ -11,7 +11,6 @@
 <script type="text/javascript" src="./static/jquery-1.6.min.js"></script> 
 <script type="text/javascript" src="static/jquery-impromptu.3.2.js"></script>
 
-<!-- Include *at least* the core style and default theme -->
 <link href="static/impromptu.css" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" type="text/css" href="./static/layout.css" /> 
 

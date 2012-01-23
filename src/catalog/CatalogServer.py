@@ -575,7 +575,7 @@ def register():
 
 @route( '/error', method = "GET" )
 def error( e ):
-    return "%s: %s" % ( type( e ).__name__, e )
+    return  "An error has occurred: %s" % ( e )
 
       
 #///////////////////////////////////////////////  
