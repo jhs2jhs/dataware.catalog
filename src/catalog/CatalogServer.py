@@ -690,7 +690,7 @@ if __name__ == '__main__' :
     #-------------------------------
     # constants
     #-------------------------------
-    EXTENSION_COOKIE = "logged_in"
+    EXTENSION_COOKIE = "catalog_logged_in"
     PORT = 8080
     REALM = "http://www.prefstore.org:8080" 
     ROOT_PAGE = "/"
