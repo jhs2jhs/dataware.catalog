@@ -47,8 +47,6 @@ def openID_login():
     except:
         params = ""
     
-    print params
-    
     try: 
         username = request.GET[ 'username' ]    
     except: 
@@ -70,7 +68,6 @@ def openID_login():
     except Exception, e:
         return error( e )
     
-    print url
     #Here we do a javascript redirect. A 302 redirect won't work
     #if the calling page is within a frame (due to the requirements
     #of some openid providers who forbid frame embedding), and the 
@@ -127,7 +124,6 @@ def authenticate():
     except:
         redirect_uri = REALM + ROOT_PAGE
     
-    print redirect_uri
     return "<script>self.parent.location = '%s'</script>" % ( redirect_uri, )
        
                 
@@ -381,20 +377,39 @@ def client_authorize():
     
 #//////////////////////////////////////////////////////////
       
-  
-@route( '/access', method = "POST" )
-def access():
 
-    grant_type = request.forms.get( 'grant_type' )
-    redirect_uri = request.forms.get( 'redirect_uri' )
-    auth_code = request.forms.get( 'code' )
+@route( '/client_access', method = "GET" )
+def client_access():
+
+    grant_type = request.GET.get( "grant_type", None )
+    redirect_uri = request.GET.get( "redirect_uri", None )
+    auth_code = request.GET.get( "code", None )    
         
-    result = am.access( 
+    result = am.client_access( 
         grant_type = grant_type,
         redirect_uri = redirect_uri,
         auth_code = auth_code 
     )
     
+    return result
+
+
+#//////////////////////////////////////////////////////////
+      
+
+@route( '/resource_access', method = "GET" )
+def resource_access():
+
+    grant_type = request.GET.get( "grant_type", None )
+    redirect_uri = request.GET.get( "redirect_uri", None )
+    auth_code = request.GET.get( "code", None )    
+                
+    result = am.resource_access( 
+        grant_type = grant_type,
+        redirect_uri = redirect_uri,
+        auth_code = auth_code 
+    )
+
     return result
 
 

@@ -461,8 +461,31 @@ class CatalogDB( object ):
             else :
                 return None
         else :
-            return None           
-          
+            return None     
+              
+
+    #///////////////////////////////////////
+
+
+    @safety_mysql                
+    def fetch_install_by_auth_code( self, auth_code ) :
+
+        if auth_code :
+            query = """
+                SELECT * FROM %s.%s t where auth_code = %s 
+            """  % ( self.DB_NAME, self.TBL_CATALOG_INSTALLS, '%s' ) 
+        
+            self.cursor.execute( query, ( auth_code, ) )
+            row = self.cursor.fetchone()
+
+            if not row is None:
+                return row
+            else :
+                return None
+        else :
+            return None
+        
+                  
     #///////////////////////////////////////
 
 

@@ -123,7 +123,10 @@ class AuthorizationModule( object ) :
     
     def format_access_success( self, access_token ):
         
-        json_response = { 'access_token': access_token,}
+        json_response = { 
+            'success' : True, 
+            'access_token': access_token,
+        }
         return json.dumps( json_response );
     
      
@@ -133,6 +136,7 @@ class AuthorizationModule( object ) :
     def format_access_failure( self, error, msg = None ):
         
         json_response = { 
+            'success' : False,
             'error':error,
             'error_description':msg
         } 
@@ -570,49 +574,62 @@ class AuthorizationModule( object ) :
 
     #///////////////////////////////////////////////
     
+    
+    def client_access( self, grant_type, redirect_uri, auth_code ):
+        return self._access( 
+            grant_type, 
+            redirect_uri, 
+            auth_code,
+            self.db.fetch_request_by_auth_code )
+    
+    
+    #///////////////////////////////////////////////
+    
+    
+    def resource_access( self, grant_type, redirect_uri, auth_code ):
+        return self._access( 
+            grant_type, 
+            redirect_uri, 
+            auth_code,
+            self.db.fetch_install_by_auth_code )
         
-    def access( self, grant_type, redirect_uri, auth_code ):
-        
+            
+    #///////////////////////////////////////////////
+    
+    
+    def _access( self, grant_type, redirect_uri, auth_code, fetch_fn ):
+
         try:
-           
             if grant_type != "authorization_code" :
                 return self.format_access_failure(
                     "unsupported_grant_type",
                     "Grant type is either missing or incorrect"
                 )  
                                 
-            #check that the client_id exists and is valid
             if ( redirect_uri is None or auth_code is None ) :
                 return self.format_access_failure(
                     "invalid_request",
                     "A valid redirect_uri and authorization code must be provided"
                 )  
-            
-            #so far so good. Add the request to the user's database
-            #Note that if the resource the client has requested access to
-            #doesn't exist, the database will throw a foreign key error.
+                        
+            #so far so good. Fetch the request that corresponds 
+            #to the auth_code that has been supplied
             try:
-                request = self.db.fetch_request_by_auth_code( auth_code )
+                access_obj = fetch_fn( auth_code )
                 
-                if request == None :
+                if access_obj == None :
                     return self.format_access_failure(
                         "invalid_grant", 
                         "Authorization Code supplied is unrecognized" 
                     )  
-                    
-                if not request[ "redirect_uri" ] == redirect_uri :
-                    return self.format_access_failure(
-                        "invalid_client", 
-                        "Client redirect_uri is incorrect for that code" 
-                    )  
                 
-                if not request[ "access_token" ]  :
+                if not access_obj[ "access_token" ]  :
                     return self.format_access_failure(
                         "server_error", 
                         "No access token seems to be available for that code" 
                     )
                     
-                return self.format_access_success( request[ "access_token" ] ) 
+                return self.format_access_success( access_obj[ "access_token" ] ) 
             
             #determine if there has been a database error
             except MySQLdb.Error:
@@ -622,15 +639,15 @@ class AuthorizationModule( object ) :
                 ) 
 
         #determine if there has been a database error
-        except Exception:
+        except Exception, e:
             return self.format_access_failure(
                 "server_error", 
                 "An unknown error has occurred" 
             )             
 
-                 
+ 
     #///////////////////////////////////////////////
-    
+     
     
     def reject_request( self, user_id, request_id ):
         
