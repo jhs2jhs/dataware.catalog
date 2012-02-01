@@ -100,13 +100,27 @@
 
 		<div>
 			<div style="float:left; margin:0 8 0 1">
-				<a href='{{resource[ "web_uri" ]}}' target='_blank'>
-					<img src='{{resource[ "logo_uri" ]}}' style='width:70px; height:70px'/></a>
+				%if resource[ "logo_uri" ]:
+					%if resource[ "web_uri" ]:
+						<a href='{{resource[ "web_uri" ]}}' target='_blank'><img src='{{resource[ "logo_uri" ]}}' style='width:70px; height:70px'/></a>
+					%else:
+						<img src='{{resource[ "logo_uri" ]}}' style='width:70px; height:70px'/>
+					%end
+				%else:
+					%if resource[ "web_uri" ]:
+						<a href='{{resource[ "web_uri" ]}}' target='_blank'><img src='./static/unknown.png' style='width:70px; height:70px'/></a>
+					%else:
+						<img src='./static/unknown.png' style='width:70px; height:70px'/>
+					%end
+				%end
 			</div>
 			<div style="margin-left:80px">
 				<div>
-					<a href='{{resource[ "web_uri" ]}}' target='_blank' style="font-size:14px; font-weight:bold; color:#864747;">
-					{{resource[ "resource_name" ]}}</a>
+					%if resource[ "web_uri" ]:
+						<a style='color:9f5102' href='{{resource[ "web_uri" ]}}' target='_blank' style="font-size:14px; font-weight:bold; color:#864747;">{{resource[ "resource_name" ]}}</a>
+					%else:
+						<b style='color:9f5102'>{{resource[ "resource_name" ]}}</b>
+					%end
 				</div>
 				<div style="margin-top:10"> <b>registered:</b> 
 				%import time
@@ -119,7 +133,7 @@
 			<div style="margin:20 0 10 0; text-align:right;">
 			%if user:
 				<a href="javascript:authorize_resource()" style="font-size:14px;">install</a> |
-				<a href="javascript:reject_resource('The+user+denied+your+request')" style="font-size:14px;">cancel</a>
+				<a href="javascript:reject_resource('The+user+denied+your+request')" style="font-size:14px;">reject</a>
 			%else:
 				<a href='login?resource_id={{resource["resource_id"]}}&redirect_uri={{resource["redirect_uri"]}}&state={{state}}' style="font-size:14px;">login</a>
 			%end
