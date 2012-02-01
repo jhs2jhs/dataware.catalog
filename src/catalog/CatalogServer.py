@@ -237,6 +237,18 @@ def resource_request( user_name = None ):
     except Exception, e:
         return error( e ) 
 
+    #Check that the resource isn't already installed
+    install = db.fetch_install( user[ "user_id" ], resource_id )
+    if ( install ):
+        return template( 'resource_request_error_template', 
+           error = "Resource has already been registered"
+        );
+        
+    if ( resource[ "redirect_uri" ] != redirect_uri ):
+        return template( 'resource_request_error_template', 
+           error = "The resource has supplied incorrect credentials."
+        );
+        
     return template( 'resource_request_template', 
         user=user,
         state=state,
