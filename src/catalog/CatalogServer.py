@@ -652,7 +652,42 @@ def check_login():
     #if the user has made it this far, their page can be processed accordingly
     else:
         return None   
+
+#///////////////////////////////////////////////  
     
+    
+@route('/audit')
+def audit():
+    
+    PREVIEW_ROWS = 10
+    
+    try:
+        user = check_login()
+        if ( not user ) : redirect( ROOT_PAGE ) 
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return error( e.msg )
+    except Exception, e:
+        return error( e )  
+    
+    requests = db.fetch_requests( user[ "user_id" ] )
+    
+    for request in requests:
+        try:
+            index = [ m.start() for m in re.finditer( r"\n", request[ "query" ]) ][ PREVIEW_ROWS ]
+            request[ "preview" ] = "%s\n..." % request[ "query" ][ 0:index ]
+        except:
+            request[ "preview" ] = request[ "query" ]
+        
+    return template( 
+        'audit_page_template', 
+        REALM=REALM, 
+        user=user, 
+        requests=requests
+    );
+    
+        
 #///////////////////////////////////////////////  
     
 @route('/static/:filename')
