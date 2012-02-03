@@ -98,7 +98,7 @@
 			INSTALLATION REQUEST
 		</div>
 
-		<div>
+		<div style="padding-bottom:20px; border-bottom: 1px dotted black">
 			<div style="float:left; margin:0 8 0 1">
 				%if resource[ "logo_uri" ]:
 					%if resource[ "web_uri" ]:
@@ -114,7 +114,7 @@
 					%end
 				%end
 			</div>
-			<div style="margin-left:80px">
+			<div style="margin-left:80px;">
 				<div>
 					%if resource[ "web_uri" ]:
 						<a style='color:9f5102' href='{{resource[ "web_uri" ]}}' target='_blank' style="font-size:14px; font-weight:bold; color:#864747;">{{resource[ "resource_name" ]}}</a>
@@ -129,16 +129,37 @@
 				<div style="margin-top:10"> <b>description:</b> {{resource[ "description" ]}} </div>		
 					
 			</div>
+		</div>
+		
+		<div style="padding-bottom:20px; border-bottom: 1px dotted black">
+			<div style="float:left; margin:0 8 0 1">
+				<img src='https://www.takeactioncwu.com/sites/all/themes/cectheme/images/unknown-user.gif' style='width:70px; height:70px'/>
+				
+			</div>
+			<div style="margin-left:80px;">
+				<div style="margin-top:10; color:#884b4b;"> 
+					<b>username:</b> {{user[ "user_name" ]}}
+				</div>
+				<div style="margin-top:10; color:#884b4b;"> 
+					<b>email:</b>  {{user[ "email" ]}}
+				</div>
+				<div style="margin-top:10; color:#884b4b;"> 
+					<a href='login?resource_id={{resource["resource_id"]}}&redirect_uri={{resource["redirect_uri"]}}&state={{state}}' style="font-size:14px;">not you?</a> 
+				</div>
+			</div>
+		</div>
 
-			<div style="margin:20 0 10 0; text-align:right;">
+
+		<div style="margin:20 0 10 0; text-align:right;">
 			%if user:
 				<a href="javascript:authorize_resource()" style="font-size:14px;">install</a> |
 				<a href="javascript:reject_resource('The+user+denied+your+request')" style="font-size:14px;">reject</a>
 			%else:
 				<a href='login?resource_id={{resource["resource_id"]}}&redirect_uri={{resource["redirect_uri"]}}&state={{state}}' style="font-size:14px;">login</a>
 			%end
-			<div>
-		</div>
+		<div>
+
+
 	</div>
 	
 </div>

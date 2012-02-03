@@ -353,6 +353,29 @@ class CatalogDB( object ):
         self.cursor.execute( query, ( user_id, resource_id, ) )
         return self.cursor.fetchone()
     
+    
+    #///////////////////////////////////////
+
+
+    @safety_mysql                
+    def fetch_install_by_name( self, user_id, resource_name ) :
+        print 1
+        if not resource_name: return None
+        query = """
+                SELECT * FROM %s.%s i, %s.%s r 
+                WHERE i.user_id = %s 
+                AND i.resource_id = r.resource_id
+                AND r.resource_name = %s
+            """ % \
+            ( self.DB_NAME, self.TBL_CATALOG_INSTALLS,
+              self.DB_NAME, self.TBL_CATALOG_RESOURCES, 
+               '%s', '%s' )
+        print query % ( user_id, resource_name )
+        self.cursor.execute( query, ( user_id, resource_name, ) )
+        print 2
+        return self.cursor.fetchone()
+    
+    
         
     #///////////////////////////////////////
 
@@ -386,7 +409,7 @@ class CatalogDB( object ):
     @safety_mysql   
     def insert_access_request( self, 
         user_id, client_id, state, redirect_uri,
-        resource_id, expiry_time, query_code, request_status ):
+        resource_name, expiry_time, query_code, request_status ):
        
         #create a SHA checksum for the file
         checksum = hashlib.sha1( query_code ).hexdigest()
@@ -403,7 +426,7 @@ class CatalogDB( object ):
                 user_id, 
                 client_id, 
                 state,
-                resource_id,
+                resource_name,
                 redirect_uri,                
                 expiry_time, 
                 query_code,

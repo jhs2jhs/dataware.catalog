@@ -304,7 +304,6 @@ class AuthorizationModule( object ) :
                     "unauthorized_client", "A valid client ID/redirect_uri pair has not been provided"
                 ) 
     
-                
             #check that the scope unpacks
             try:
                 scope = json.loads( 
@@ -312,13 +311,23 @@ class AuthorizationModule( object ) :
                     strict=False 
                 )
     
-                resource_id = scope[ "resource_id" ]
+                resource_name = scope[ "resource_name" ]
                 expiry_time = scope[ "expiry_time" ]
                 query = scope[ "query" ] 
                 
             except Exception, e:
                 return self.format_submission_failure(
                     "invalid_scope", "incorrectly formatted JSON scope" ) 
+            
+            #check that the resource is installed by the user
+            resource = self.db.fetch_install_by_name( 
+                user[ "user_id" ],
+                resource_name )
+
+            if not resource:
+                return self.format_submission_failure(
+                    "invalid_request", "User does not have a resource installed by that name"
+                )
             
             #so far so good. Add the request to the user's database
             #Note that if the resource the client has requested access to
@@ -329,7 +338,7 @@ class AuthorizationModule( object ) :
                 client_id, 
                 state,
                 redirect_uri,
-                resource_id,
+                resource[ "resource_id" ],
                 expiry_time, 
                 query,
                 Status.PENDING
@@ -349,7 +358,7 @@ class AuthorizationModule( object ) :
             #foreign key error (means that the specified resource is unknown)
             elif ( e[ 0 ] == 1452): 
                 return self.format_submission_failure(
-                    "invalid_request", "A valid resource name has not been provided"
+                    "invalid_request", "Problem tying resource name to supplied user"
                 )
         
         #otherwise we have wider database problems
@@ -357,6 +366,7 @@ class AuthorizationModule( object ) :
             return self.format_submission_failure(
                 "server_error", "Database problems are currently being experienced"
             ) 
+     
      
     #///////////////////////////////////////////////
     
