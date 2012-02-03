@@ -203,7 +203,7 @@ def resource_register():
 
     
 @route( '/resource_request', method = "GET" )
-def resource_request( user_name = None ):
+def resource_request():
 
     #first check that required parameters have beeing supplied
     try: 
@@ -236,13 +236,6 @@ def resource_request( user_name = None ):
         return error( e.msg )
     except Exception, e:
         return error( e ) 
-
-    #Check that the resource isn't already installed
-    install = db.fetch_install( user[ "user_id" ], resource_id )
-    if ( install ):
-        return template( 'resource_request_error_template', 
-           error = "Resource has already been registered"
-        );
         
     if ( resource[ "redirect_uri" ] != redirect_uri ):
         return template( 'resource_request_error_template', 
@@ -274,7 +267,7 @@ def resource_authorize():
     resource_id = request.forms.get( 'resource_id' )   
     redirect_uri = request.forms.get( 'redirect_uri' )
     state = request.forms.get( 'state' )  
-
+    
     result = am.resource_authorize( 
         user,
         resource_id = resource_id,
