@@ -359,7 +359,7 @@ class CatalogDB( object ):
 
     @safety_mysql                
     def fetch_install_by_name( self, user_id, resource_name ) :
-        print 1
+
         if not resource_name: return None
         query = """
                 SELECT * FROM %s.%s i, %s.%s r 
@@ -370,9 +370,9 @@ class CatalogDB( object ):
             ( self.DB_NAME, self.TBL_CATALOG_INSTALLS,
               self.DB_NAME, self.TBL_CATALOG_RESOURCES, 
                '%s', '%s' )
-        print query % ( user_id, resource_name )
+
         self.cursor.execute( query, ( user_id, resource_name, ) )
-        print 2
+
         return self.cursor.fetchone()
     
     
