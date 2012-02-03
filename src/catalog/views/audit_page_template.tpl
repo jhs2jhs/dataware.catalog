@@ -255,7 +255,7 @@
 							<div class="item_value" >{{request["client_name"]}}</div>
 						</div>
 						<div class="request_attribute">
-							<div class="item_name" >resource name:</div>
+							<div class="item_name" >against resource:</div>
 							<div class="item_value" >{{request["resource_name"]}}</div>
 						</div>
 						<div class="request_attribute">
@@ -264,7 +264,8 @@
 						</div>
 						<div class="request_attribute">
 							<div class="item_name" >expiry time:</div>
-							<div class="item_value" >{{request["expiry_time"]}}</div>
+							%import time
+							<div class="item_value" >{{time.strftime( "%d %b %Y %H:%M", time.gmtime( request["expiry_time"]) )}}</div>
 						</div>
 						<div style="margin:3px">
 							%if request["request_status"] == "PENDING":
@@ -277,7 +278,7 @@
 					</div>
 					<div style="font-size:12px; float:left; overflow:none; width:700px;">
 						<div class="item_name" style="width:690px; text-align:left; margin-bottom:10px;">
-							requested processor <i>(for {{request["resource_id"]}})</i>:
+							requested processor:
 					%if request[ "query" ] != request [ "preview"] :
 								<a href='javascript:toggle({{request["request_id"]}})'>toggle preview</a>
 						</div>
