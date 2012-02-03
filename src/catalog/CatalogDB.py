@@ -709,17 +709,17 @@ class CatalogDB( object ):
         if user_id:
             
             query = """
-                SELECT s.*, t.client_name, r.resource_name 
-                FROM %s.%s s, %s.%s t, %s.%s r   
+                SELECT s.*, t.client_name, r.resource_name
+                FROM %s.%s s, %s.%s t, %s.%s r
                 WHERE s.user_id = %s 
                 AND s.client_id = t.client_id
-                AND s.user_id = r.user_id
                 AND s.resource_id = r.resource_id
             """ % ( 
                 self.DB_NAME, self.TBL_CATALOG_REQUESTS, 
                 self.DB_NAME, self.TBL_CATALOG_CLIENTS,
                 self.DB_NAME, self.TBL_CATALOG_RESOURCES,  '%s' 
             )
+
             self.cursor.execute( query, ( user_id, ) )
             return self.cursor.fetchall()
         else:
