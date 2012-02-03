@@ -295,7 +295,7 @@ class AuthorizationModule( object ) :
             user = self.db.fetch_user_by_name( user_name )
             if not ( user ) :        
                 return self.format_submission_failure(
-                    "invalid_request", "A valid user ID has not been provided" ) 
+                    "invalid_request", "The specified user name is not recognized" ) 
                
             #check that the client_id exists and is valid
             client = self.db.fetch_client_by_id( client_id )
