@@ -35,7 +35,7 @@
 		$.ajax({
 			type: 'POST',
 			url: "/resource_authorize",
-			data: 'resource_id={{resource["resource_id"]}}&state={{state}}&redirect_uri={{resource["redirect_uri"]}}',
+			data: 'resource_id={{resource["resource_id"]}}&state={{state}}&redirect_uri={{resource["resource_uri"]}}',
 			success: function( data, status  ) {
 
 				data = eval( '(' + data + ')' );
@@ -56,7 +56,7 @@
 	function reject_resource( error ) {
 
 		window.location.href =  
-			'{{resource["redirect_uri"]}}' +
+			'{{resource["resource_uri"]}}' +
 			'?state={{state}}' +
 			'&error=access_denied' +
 			'&error_description=' + error ;
@@ -131,7 +131,7 @@
 			</div>
 		</div>
 		
-		<div style="padding-bottom:20px; border-bottom: 1px dotted black">
+		<div style="padding-bottom:5px;">
 			<div style="float:left; margin:0 8 0 1">
 				<img src='https://www.takeactioncwu.com/sites/all/themes/cectheme/images/unknown-user.gif' style='width:70px; height:70px'/>
 				
@@ -144,7 +144,7 @@
 					<b>email:</b>  {{user[ "email" ]}}
 				</div>
 				<div style="margin-top:10; color:#884b4b;"> 
-					<a href='login?resource_id={{resource["resource_id"]}}&redirect_uri={{resource["redirect_uri"]}}&state={{state}}' style="font-size:14px;">not you?</a> 
+					<a href='login?resource_id={{resource["resource_id"]}}&redirect_uri={{resource["resource_uri"]}}&state={{state}}' style="font-size:14px;">not you?</a> 
 				</div>
 			</div>
 		</div>
@@ -155,7 +155,7 @@
 				<a href="javascript:authorize_resource()" style="font-size:14px;">install</a> |
 				<a href="javascript:reject_resource('The+user+denied+your+request')" style="font-size:14px;">reject</a>
 			%else:
-				<a href='login?resource_id={{resource["resource_id"]}}&redirect_uri={{resource["redirect_uri"]}}&state={{state}}' style="font-size:14px;">login</a>
+				<a href='login?resource_id={{resource["resource_id"]}}&redirect_uri={{resource["resource_uri"]}}&state={{state}}' style="font-size:14px;">login</a>
 			%end
 		<div>
 

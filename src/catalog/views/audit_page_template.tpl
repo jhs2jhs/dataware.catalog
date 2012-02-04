@@ -26,7 +26,7 @@
 	
 	function forwarding_box( error, redirect ) {
 		msg = "<span class='resource_error_box'>RESOURCE SAYS:</span>&nbsp;&nbsp;<i>\"" + error + "\"</i><br/>";
-		msg += "<span class='resource_error_box'>There is no choice but to reject the request.</span>";
+		msg += "<span class='resource_error_box'>There is no choice but to reject the processing request.</span>";
 		$.prompt( msg,  {  
 			buttons: { Continue: true },
 			callback: function ( v, m, f ) { 
@@ -44,14 +44,14 @@
 
 	////////////////////////////////////////////////////
 
-	function authorize_request( request_id ) {
+	function authorize_request( processor_id ) {
 		$.prompt(
-			'Are you sure you want to authorize this request?', 
+			'Are you sure you want to authorize this processing request?', 
 			{ 
 				buttons: { Yes: true, Cancel: false },
 				callback: function ( v, m, f ) { 
 					if ( v == false ) return;
-					else authorize_request_ajax( request_id )
+					else authorize_request_ajax( processor_id )
 				}
 			}
 		)
@@ -59,14 +59,14 @@
 
 	////////////////////////////////////////////////////
 
-	function reject_request( request_id ) {
+	function reject_request( processor_id ) {
 		$.prompt(
-			'Are you sure you want to reject this request?', 
+			'Are you sure you want to reject this processing request?', 
 			{ 
 				buttons: { Yes: true, Cancel: false },
 				callback: function ( v, m, f ) { 
 					if ( v == false ) return;
-					else reject_request_ajax( request_id )
+					else reject_request_ajax( processor_id )
 				}
 			}
 		)
@@ -74,14 +74,14 @@
 
 	////////////////////////////////////////////////////
 
-	function revoke_request( request_id ) {
+	function revoke_request( processor_id ) {
 		$.prompt(
-			'Are you sure you want to revoke this request?', 
+			'Are you sure you want to revoke this processing request?', 
 			{ 
 				buttons: { Yes: true, Cancel: false },
 				callback: function ( v, m, f ) { 
 					if ( v == false ) return;
-					else revoke_request_ajax( request_id )
+					else revoke_request_ajax( processor_id )
 				}
 			}
 		)
@@ -89,11 +89,11 @@
 
 	////////////////////////////////////////////////////
 
-	function authorize_request_ajax( request_id ) {
+	function authorize_request_ajax( processor_id ) {
 		$.ajax({
 			type: 'POST',
-			url: "/authorize_request",
-			data: "request_id=" + request_id,
+			url: "/client_authorize",
+			data: "processor_id=" + processor_id,
 			success: function( data, status  ) {
 				data = eval( '(' + data + ')' );
 				if ( data.success ) {
@@ -112,11 +112,11 @@
 
 	////////////////////////////////////////////////////
 
-	function reject_request_ajax( request_id ) {
+	function reject_request_ajax( processor_id ) {
 		$.ajax({
 			type: 'POST',
-			url: "/reject_request",
-			data: "request_id=" + request_id,
+			url: "/client_reject",
+			data: "processor_id=" + processor_id,
 			success: function( data, status ) {
 				data = eval('(' + data + ')');
 				if ( data.success ) {
@@ -133,11 +133,11 @@
 
 	////////////////////////////////////////////////////
 
-	function revoke_request_ajax( request_id ) {
+	function revoke_request_ajax( processor_id ) {
 		$.ajax({
 			type: 'POST',
-			url: "/revoke_request",
-			data: "request_id=" + request_id,
+			url: "/client_revoke",
+			data: "processor_id=" + processor_id,
 			success: function( data, status  ) {
 				data = eval( '(' + data + ')' );
 				if ( data.success ) {
@@ -156,9 +156,9 @@
 
 	////////////////////////////////////////////////////
 
-	function toggle( request_id ) {
-		full = $( "#request_" + request_id + "_full" );
-		preview = $( "#request_" + request_id + "_preview" );
+	function toggle( processor_id ) {
+		full = $( "#request_" + processor_id + "_full" );
+		preview = $( "#request_" + processor_id + "_preview" );
 
 		if ( full.css( "display" ) == "none" ) {
 			full.css( "display", "block" );
@@ -244,55 +244,55 @@
 	------------------------------------------------------------------>
 	<div style="float:left; clear:both;">
 		<div>
-			%for request in requests:
-			<div id='request_{{request["request_id"]}}' class="request_box">
-				<div class="item_number">{{request["request_id"]}}</div>
+			%for processor in processors:
+			<div id='request_{{processor["processor_id"]}}' class="request_box">
+				<div class="item_number">{{processor["processor_id"]}}</div>
 				<div style="float:left;" >
 					<div style="width:954; height:5px; background-color:#aa6666;"> </div>
 					<div style="float:left; width:257px;" >
 						<div class="request_attribute">
 							<div class="item_name" >request from:</div>
-							<div class="item_value" >{{request["client_name"]}}</div>
+							<div class="item_value" >{{processor["client_name"]}}</div>
 						</div>
 						<div class="request_attribute">
 							<div class="item_name" >against resource:</div>
-							<div class="item_value" >{{request["resource_name"]}}</div>
+							<div class="item_value" >{{processor["resource_name"]}}</div>
 						</div>
 						<div class="request_attribute">
 							<div class="item_name" >current status:</div>
-							<div class="item_value" >{{request["request_status"]}}</div>
+							<div class="item_value" >{{processor["request_status"]}}</div>
 						</div>
 						<div class="request_attribute">
 							<div class="item_name" >expiry time:</div>
 							%import time
-							<div class="item_value" >{{time.strftime( "%d %b %Y %H:%M", time.gmtime( request["expiry_time"]) )}}</div>
+							<div class="item_value" >{{time.strftime( "%d %b %Y %H:%M", time.gmtime( processor["expiry_time"]) )}}</div>
 						</div>
 						<div style="margin:3px">
-							%if request["request_status"] == "PENDING":
-								<a href='javascript:authorize_request({{request["request_id"]}})'>authorize</a> |
-								<a href='javascript:reject_request({{request["request_id"]}})'>reject</a>
-							%elif request["request_status"] == "ACCEPTED":
-								<a href='javascript:revoke_request({{request["request_id"]}})'>revoke</a>
+							%if processor[ "request_status" ] == "PENDING":
+								<a href='javascript:authorize_request({{processor[ "processor_id" ]}})'>authorize</a> |
+								<a href='javascript:reject_request({{processor[ "processor_id" ]}})'>reject</a>
+							%elif processor[ "request_status" ] == "ACCEPTED":
+								<a href='javascript:revoke_request({{processor[ "processor_id" ]}})'>revoke</a>
 							%end
 						</div>
 					</div>
 					<div style="font-size:12px; float:left; overflow:none; width:700px;">
 						<div class="item_name" style="width:690px; text-align:left; margin-bottom:10px;">
 							requested processor:
-					%if request[ "query" ] != request [ "preview"] :
-								<a href='javascript:toggle({{request["request_id"]}})'>toggle preview</a>
+					%if processor[ "query" ] != processor [ "preview" ] :
+								<a href='javascript:toggle({{processor[ "processor_id" ]}})'>toggle preview</a>
 						</div>
-						<div id='request_{{request["request_id"]}}_preview'>
-							<code class="brush: python; toolbar: false">{{request["preview"]}}</code>
+						<div id='request_{{processor[ "processor_id" ]}}_preview'>
+							<code class="brush: python; toolbar: false">{{processor[ "preview" ]}}</code>
 							<div class="item_name" style="float:right; margin-top:-15px;">. . . end of preview</div>
 						</div>
-						<div id='request_{{request["request_id"]}}_full' style="display:none; margin-left:-6px;">
-							<code class="brush: python; toolbar: false">{{request["query"]}}</code>
+						<div id='request_{{processor[ "processor_id" ]}}_full' style="display:none; margin-left:-6px;">
+							<code class="brush: python; toolbar: false">{{processor[ "query" ]}}</code>
 						</div>
 					%else:
 						</div>
 						<div>
-							<code class="brush: python; toolbar: false">{{request["query"]}}</code>
+							<code class="brush: python; toolbar: false">{{processor[ "query" ]}}</code>
 						</div>
 					%end
 					</div>

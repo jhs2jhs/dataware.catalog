@@ -34,9 +34,10 @@ class AuthorizationException ( Exception ):
 #///////////////////////////////////////////////  
 
 
-class RegistrationException ( Exception ):
+class PermitException ( Exception ):
     def __init__(self, msg):
         self.msg = msg
+
 
 #///////////////////////////////////////////////  
 
@@ -57,7 +58,7 @@ class RevocationException ( Exception ):
 #///////////////////////////////////////////////  
 
 
-class DeregisterException ( Exception ):
+class RevokeException ( Exception ):
     def __init__(self, msg):
         self.msg = msg
        
@@ -94,7 +95,7 @@ class AuthorizationModule( object ) :
             
     #///////////////////////////////////////////////
     
-    def format_submission_success( self, result = None ):
+    def _format_submission_success( self, result = None ):
         
         if ( result ) :
             json_response = { 'success' : True, 'return' : result }
@@ -107,7 +108,7 @@ class AuthorizationModule( object ) :
     #///////////////////////////////////////////////
 
 
-    def format_submission_failure( self, error, error_description ):
+    def _format_submission_failure( self, error, error_description ):
         
         json_response = { 
             'success' : False,
@@ -121,19 +122,20 @@ class AuthorizationModule( object ) :
     #///////////////////////////////////////////////
     
     
-    def format_access_success( self, access_token ):
+    def _format_access_success( self, access_token ):
         
         json_response = { 
             'success' : True, 
             'access_token': access_token,
         }
+        
         return json.dumps( json_response );
     
      
     #///////////////////////////////////////////////
 
 
-    def format_access_failure( self, error, msg = None ):
+    def _format_access_failure( self, error, msg = None ):
         
         json_response = { 
             'success' : False,
@@ -147,71 +149,108 @@ class AuthorizationModule( object ) :
     #///////////////////////////////////////////////
 
         
-    def format_auth_success( self, redirect_uri, state, auth_code ):
+    def _format_auth_success( self, 
+        redirect_uri, state, auth_code, resource_access_uri = None ):
+
         url =  "%s?state=%s&code=%s" % \
             ( redirect_uri, state, auth_code ) 
-        return json.dumps( { 'success':True, 'redirect':url } )
+
+        json_response = { 
+            'success':True, 
+            'redirect':url
+        } 
+            
+        return json.dumps( json_response )
 
 
     #///////////////////////////////////////////////
     
     
-    def format_auth_failure( self, redirect_uri, state, error ):
+    def _format_auth_failure( self, redirect_uri, state, error ):
+
         url = "%s?state=%s&error=access_denied&error_description=%s" % \
             ( redirect_uri, state, error ) 
-        return json.dumps( 
-            { 
-                'success':False, 
-                'error':error, 
-                'cause':"resource_provider", 
-                'redirect':url 
-            } 
-        )
+
+        json_response = { 
+            'success':False, 
+            'error':error, 
+            'cause':"resource_provider", 
+            'redirect':url 
+        } 
+            
+        return json.dumps( json_response )        
     
     
     #///////////////////////////////////////////////
 
 
-    def format_revoke_success( self, redirect_uri, state, error ):
+    def _format_revoke_success( self, redirect_uri, state, error ):
+
         url = "%s?state=%s&error=access_denied&error_description=%s" % \
             ( redirect_uri, state, error ) 
-        return json.dumps( { 'success':True, 'redirect':url } )
+
+        json_response = { 
+            'success':True, 
+            'redirect':url 
+        } 
+            
+        return json.dumps( json_response )         
     
          
     #///////////////////////////////////////////////
 
 
-    def format_failure( self, error, cause = "catalog" ):
-        return json.dumps( { 'success':False, 'error':error, 'cause':cause } );
-                 
-                 
+    def _format_failure( self, error, cause = "catalog" ):
+        
+        json_response = { 
+            'success':False, 
+            'error':error, 
+            'cause':cause
+        } 
+            
+        return json.dumps( json_response )
+             
+
     #///////////////////////////////////////////////
     
     
-    def resource_register( self, resource_name, redirect_uri,
-        description, logo_uri, web_uri, namespace ):
-       
+    def resource_register( self, resource_name, 
+        resource_uri, description, logo_uri, web_uri, namespace ):
         
-        if ( resource_name is None or redirect_uri is None ) :
-            return self.format_submission_failure(
+        #check we have all the required paramters 
+        if resource_name is None :
+            return self._format_submission_failure(
+                "catalog_denied", "A valid resource_name must be provided" )
+        
+        if resource_name is None :
+            return self._format_submission_failure(
+                "catalog_denied", "A valid redirect_uri must be provided" )
+        
+        if resource_name is None :
+            return self._format_submission_failure(
+                "catalog_denied", "A valid dataware namespace must be provided" )
+        
+        #also confirm that its and endpoint (not a directory)
+        if resource_uri[ -1 ] == "/":
+            return self._format_submission_failure(
                 "catalog_denied", 
-                "A valid resource_name and redirect_uri must be provided" )
+                "your redirect URI must not end with /" )
         
-        #check that the user_id exists and is valid
-        resource = self.db.fetch_resource_by_name( resource_name )
+        #check the resource does not clash with a previously registered one
+        resource = self.db.resource_fetch_by_name( resource_name )
 
         if ( resource ) :        
-            return self.format_submission_failure(
+            return self._format_submission_failure(
                 "catalog_denied",                
                 "A resource with that name already exists in the catalog" ) 
 
         try:
-            resource_id = self.generateAuthorizationCode()
-
-            self.db.insert_resource_registration( 
+            resource_id = self._generate_access_code()
+  
+            self.db.resource_insert( 
                 resource_id = resource_id,                                    
                 resource_name = resource_name,
-                redirect_uri = redirect_uri,
+                resource_uri = resource_uri,
                 description = description,
                 logo_uri = logo_uri,
                 web_uri = web_uri,
@@ -229,7 +268,7 @@ class AuthorizationModule( object ) :
             
          
         except:    
-            return self.format_submission_failure(
+            return self._format_submission_failure(
                 "catalog_problems",                
                 "Database problems are currently being experienced at the catalog"
             ) 
@@ -238,28 +277,102 @@ class AuthorizationModule( object ) :
     #///////////////////////////////////////////////
     
     
-    def client_register( self, client_name, redirect_uri,
+    def resource_authorize( self, user, resource_id, resource_uri, state ):
+       
+        try:   
+            if not ( user ) :        
+                return self._format_failure( 
+                    "A valid user ID and has not been provided." )
+
+            if not ( resource_id ) :
+                return self._format_failure( 
+                    "A valid resource ID and has not been provided." )   
+
+            #check that the resource has been registered
+            resource = self.db.resource_fetch_by_id( resource_id )
+            if not ( resource ) :
+                return self._format_failure( 
+                    "The resource has not been registered, and so cannot be installed." ) 
+
+            if not ( resource[ "resource_uri" ] == resource_uri ) :
+                return self._format_failure( 
+                    "Incorrect resource credentials have been supplied." ) 
+
+            #check that the user hasn't already been installed the resource
+            if( self.db.install_fetch_by_id( user[ "user_id" ], resource_id ) ):
+                return self._format_failure( 
+                    "You have already installed this resource." ) 
+
+            #all is well so create some access_token and authorization codes
+            #register the request as having been updated.
+            install_token = self._generate_access_code()
+            auth_code = self._generate_access_code()
+            
+            self.db.install_insert( 
+                user[ "user_id" ],
+                resource_id, 
+                state,
+                install_token,
+                auth_code                
+            )
+            
+            self.db.commit()
+            
+            #the request has been accepted so return a success redirect url
+            return self._format_auth_success(
+                 "%s/install_complete" % ( resource_uri, ),  
+                 state, 
+                 auth_code
+            )                            
+
+        except:
+            return self._format_failure( 
+                "Server is currently experiencing undetermined problems. \
+                Please try again later." )   
+            
+    
+    #///////////////////////////////////////////////
+    
+    
+    def resource_access( self, grant_type, resource_uri, auth_code ):
+        return self._access( 
+            grant_type, 
+            resource_uri, 
+            auth_code,
+            self.db.install_fetch_by_auth_code )
+        
+
+    #///////////////////////////////////////////////
+       
+    
+    def client_register( self, client_name, client_uri,
         description, logo_uri, web_uri, namespace ):
        
-        if ( client_name is None or redirect_uri is None ) :
-            return self.format_submission_failure(
+        if ( client_name is None or client_uri is None ) :
+            return self._format_submission_failure(
                 "catalog_denied",  
                 "A valid client_name and redirect_uri must be provided" )
         
+        #also confirm that its and endpoint (not a directory)
+        if client_uri[ -1 ] == "/":
+            return self._format_submission_failure(
+                "catalog_denied", 
+                "your redirect URI must not end with /" )
+
         #check that the user_id exists and is valid
-        client = self.db.fetch_client_by_name( client_name )
+        client = self.db.client_fetch_by_name( client_name )
         if ( client ) :        
-            return self.format_submission_failure(
+            return self._format_submission_failure(
                 "catalog_denied",
                 "A client with that name already exists in the catalog" ) 
         
         try:
-            client_id = self.generateAuthorizationCode()
+            client_id = self._generate_access_code()
         
-            self.db.insert_client_registration( 
+            self.db.client_insert( 
                 client_id = client_id,                                    
                 client_name = client_name,
-                redirect_uri = redirect_uri,
+                client_uri = client_uri,
                 description = description,
                 logo_uri = logo_uri,
                 web_uri = web_uri,
@@ -277,33 +390,32 @@ class AuthorizationModule( object ) :
             
          
         except:    
-            return self.format_submission_failure(
+            return self._format_submission_failure(
                 "catalog_problems",                
                 "Database problems are currently being experienced at the catalog"
             )
+                 
     
-        
     #///////////////////////////////////////////////
         
         
     def client_request( self, 
-        user_name, client_id, state, 
-        redirect_uri, json_scope ):
+        user_name, client_id, state, client_uri, json_scope ):
         
         try:
             #check that the user_id exists and is valid
-            user = self.db.fetch_user_by_name( user_name )
+            user = self.db.user_fetch_by_name( user_name )
             if not ( user ) :        
-                return self.format_submission_failure(
+                return self._format_submission_failure(
                     "invalid_request", "The specified user name is not recognized" ) 
-               
+     
             #check that the client_id exists and is valid
-            client = self.db.fetch_client_by_id( client_id )
-            if (not client) or client[ "redirect_uri" ] != redirect_uri  :        
-                return self.format_submission_failure(
+            client = self.db.client_fetch_by_id( client_id )
+            if ( not client ) or client[ "client_uri" ] != client_uri  :        
+                return self._format_submission_failure(
                     "unauthorized_client", "A valid client ID/redirect_uri pair has not been provided"
                 ) 
-    
+
             #check that the scope unpacks
             try:
                 scope = json.loads( 
@@ -316,199 +428,155 @@ class AuthorizationModule( object ) :
                 query = scope[ "query" ] 
                 
             except Exception, e:
-                return self.format_submission_failure(
+                return self._format_submission_failure(
                     "invalid_scope", "incorrectly formatted JSON scope" ) 
             
             #check that the resource is installed by the user
-            resource = self.db.fetch_install_by_name( 
+            resource = self.db.install_fetch_by_name( 
                 user[ "user_id" ],
                 resource_name )
 
             if not resource:
-                return self.format_submission_failure(
+                return self._format_submission_failure(
                     "invalid_request", "User does not have a resource installed by that name"
                 )
-            
+
             #so far so good. Add the request to the user's database
             #Note that if the resource the client has requested access to
             #doesn't exist, the database will throw a foreign key error.
 
-            self.db.insert_access_request( 
+            self.db.processor_insert( 
                 user[ "user_id" ],                                    
                 client_id, 
                 state,
-                redirect_uri,
                 resource[ "resource_id" ],
                 expiry_time, 
                 query,
                 Status.PENDING
             )
-                
-            return self.format_submission_success() 
+
+            return self._format_submission_success() 
         
         #determine if there has been an integrity error
         except MySQLdb.IntegrityError, e:
             
             #primary key error - means the entry already exists
             if ( e[ 0 ] == 1062 ):
-                return self.format_submission_failure(
+                return self._format_submission_failure(
                     "invalid_scope","Supplied Processor code is a duplicate"
                 ) 
                 
             #foreign key error (means that the specified resource is unknown)
             elif ( e[ 0 ] == 1452): 
-                return self.format_submission_failure(
+                return self._format_submission_failure(
                     "invalid_request", "Problem tying resource name to supplied user"
                 )
         
         #otherwise we have wider database problems
         except:   
-            return self.format_submission_failure(
+            return self._format_submission_failure(
                 "server_error", "Database problems are currently being experienced"
             ) 
-     
-     
+            
+    
     #///////////////////////////////////////////////
     
     
-    def resource_authorize( self, user, resource_id, redirect_uri, state ):
-       
-        try:   
-            if not ( user ) :        
-                return self.format_failure( 
-                    "A valid user ID and has not been provided." )
-
-            if not ( resource_id ) :
-                return self.format_failure( 
-                    "A valid resource ID and has not been provided." )   
-
-            #check that the resource has been registered
-            resource = self.db.fetch_resource_by_id( resource_id )
-            if not ( resource ) :
-                return self.format_failure( 
-                    "The resource has not been registered, and so cannot be installed." ) 
-
-            if not ( resource[ "redirect_uri" ] == redirect_uri ) :
-                return self.format_failure( 
-                    "Incorrect resource credentials have been supplied." ) 
-
-            #check that the user hasn't already been installed the resource
-            if( self.db.fetch_install( user[ "user_id" ], resource_id ) ):
-                return self.format_failure( 
-                    "You have already installed this resource." ) 
-
-            #all is well so create some access_token and authorization codes
-            #register the request as having been updated.
-            access_token = self.generateAuthorizationCode()
-            auth_code = self.generateAuthorizationCode()
-            
-            self.db.insert_install( 
-                user[ "user_id" ],
-                resource_id, 
-                state,
-                access_token,
-                auth_code                
-            )
-            
-            self.db.commit()
-            
-            #the request has been accepted so return a success redirect url
-            return self.format_auth_success(
-                 redirect_uri,  
-                 state, 
-                 auth_code
-            )                            
-
-        except:
-            return self.format_failure( 
-                "Server is currently experiencing undetermined problems. \
-                Please try again later." )    
-    
-               
-    #///////////////////////////////////////////////
-    
-    
-    def client_authorize( self, user_id, request_id ):
+    def client_authorize( self, user_id, processor_id ):
         
         try:
             #check that the user_id exists and is valid
-            user = self.db.fetch_user_by_id( user_id )
+            user = self.db.user_fetch_by_id( user_id )
                     
             if not ( user ) :        
-                return self.format_failure( 
+                return self._format_failure( 
                     "A valid user ID and has not been provided." )
                 
-            if not ( request_id ) :
-                return self.format_failure( 
-                    "A valid request ID and has not been provided." )   
+            if not ( processor_id ) :
+                return self._format_failure( 
+                    "A valid processor ID and has not been provided." )   
                 
-            #check that the request_id exists and is pending
-            access_request = self.db.fetch_request_by_id( request_id )
+            #check that the processor_id exists and is pending
+            processor = self.db.processor_fetch_by_id( processor_id )
 
-            if not ( access_request ) :
-                return self.format_failure( 
-                    "The request you are trying to authorize does not exist." ) 
+            if not ( processor ) :
+                return self._format_failure( 
+                    "The processing request you are trying to authorize does not exist." ) 
             
-            if not ( access_request[ "user_id" ] == user_id ) :
-                return self.format_failure( 
-                    "Incorrect user authentication for that request." ) 
+            if not ( processor[ "user_id" ] == user_id ) :
+                return self._format_failure( 
+                    "Incorrect user authentication for that processing request." ) 
             
-            if ( not access_request[ "request_status" ] == Status.PENDING ):
-                return self.format_failure( 
+            if ( not processor[ "request_status" ] == Status.PENDING ):
+                return self._format_failure( 
                     "This request has already been authorized." )   
 
+        
+            #get the details about the resource and the targeted user state
+            install = self.db.install_fetch_by_id( 
+                user_id, 
+                processor[ "resource_id" ] 
+            )
+            
+            if not ( install ) :
+                return self._format_failure( 
+                    "You do not have the targeted resource installed" ) 
+           
+        
             #contact the resource provider and fetch the access token  
             try:    
-                access_token = self.permit_request( access_request )
-            except RegistrationException, e:
-                #the request has been rejected by the resource_provider
+                access_token = self._client_permit_request( processor, install )
+                
+            except PermitException, e:
+                #the processing request has been rejected by the resource_provider
                 #so we have to return a failure redirect url and mop up
-                result = self.db.delete_request( request_id )
+                result = self.db.processor_delete( processor_id )
                 self.db.commit()
                 
-                return self.format_auth_failure(
-                    access_request[ "redirect_uri" ],
-                    access_request[ "state" ],
+                return self._format_auth_failure(
+                    processor[ "redirect_uri" ],
+                    processor[ "state" ],
                     e.msg )
             except:
-                return self.format_failure(
+                return self._format_failure(
                     "Authorization failed - unknown issue coordinating with \
                      Resource Provider. Try again later." )
         
-            #all is well so register the request as having been updated.
-            auth_code = self.generateAuthorizationCode()
+            #all is well so register the processing request as having been updated.
+            auth_code = self._generate_access_code()
             
-            result = self.db.update_request( 
-                request_id, 
+            result = self.db.processor_update( 
+                processor_id, 
                 Status.ACCEPTED, 
                 access_token,
                 auth_code
             )
 
             if ( not result ):
-                return self.format_failure( 
+                return self._format_failure( 
                     "Server is currently experiencing database problems. \
                      Please try again later." )     
                  
             self.db.commit()
             
-            #the request has been accepted so return a success redirect url
-            return self.format_auth_success(
-                 access_request[ "redirect_uri" ],  
-                 access_request[ "state" ], 
-                 auth_code
+            #the processing request has been accepted so return a success redirect url
+            return self._format_auth_success(
+                 processor[ "client_uri" ],  
+                 processor[ "state" ], 
+                 auth_code,
+                 processor[ "resource_uri" ],
             )                            
 
         except:
-            return self.format_failure( 
+            return self._format_failure( 
                 "Server is currently experiencing undetermined problems. \
-                Please try again later." )    
+                Please try again later." )     
     
-    
+               
     #///////////////////////////////////////////////
     
       
-    def permit_request( self, request ):
+    def _client_permit_request( self, processor, install ):
         """
             Once the user has accepted an authorization request, the catalog
             must check that the resource provider is happy to permit the query 
@@ -518,29 +586,28 @@ class AuthorizationModule( object ) :
         
         #build up the required data parameters for the communication
         data = urllib.urlencode( {
-                'client_id': request[ "client_id" ],
-                'shared_secret': request[ "shared_secret" ],
-                'resource_id': request[ "resource_id" ],
-                'query': request[ "query" ],
-                'expiry_time': request[ "expiry_time" ],
+                'install_token': install[ "install_token" ],
+                'client_id': processor[ "client_id" ],
+                'query': processor[ "query" ],
+                'expiry_time': processor[ "expiry_time" ],
             }
         )
-
-        url = "%s/permit_request" % ( request[ "resource_uri" ], )
+                        
+        url = "%s/permit_processor" % ( processor[ "resource_uri" ], )
 
         #if necessary setup a proxy
         if ( self._WEB_PROXY ):
             proxy = urllib2.ProxyHandler( self._WEB_PROXY )
             opener = urllib2.build_opener( proxy )
             urllib2.install_opener( opener )
-        
+
         #first communicate with the resource provider   
         try:
             req = urllib2.Request( url, data )
             response = urllib2.urlopen( req )
             output = response.read()
         except urllib2.URLError, e:
-            raise RegistrationException( "Failure - could not contact resource provider (%s)" % e )
+            raise PermitException( "Failure - could not contact resource provider (%s)" % e )
         
         #parse the json response from the provider
         try:
@@ -550,227 +617,164 @@ class AuthorizationModule( object ) :
             )
 
         except:
-            raise RegistrationException( "Invalid json returned by the resource provider" )
-
-        #determine whether the request has been successfully
-        #registered on the resource provider
+            raise PermitException( "Invalid json returned by the resource provider" )
+        
+        #determine whether the processor has been successfully
+        #permitted by the resource provider
         try:
             success = output[ "success" ]
         except:
             #if we don't get a response then the agreed schema has
             #not been fulfilled by the resource provider. Bail.
-            raise RegistrationException( "Resource provider has not returned successfully - unknown error" )
+            raise PermitException( "Resource provider has not returned successfully - unknown error" )
 
         #if it has then extract the access_token that will be used
         if success:
             try:
-                access_token = output[ "return" ][ "access_token" ]
-                return access_token
+                return output[ "access_token" ]
             except:
                 #something has gone seriously wrong with the resource provider's
                 #handling of the communication as it should have returned a key
-                cause = "Resouce provider failed to supply access token" 
+                cause = "Resource provider failed to supply access token" 
         else: 
             try:
                 #if there is a problem we should have been sent a cause
                 cause = "%s: %s" % ( output[ "error" ], output[ "error_description" ], )
             except:
                 #if not simply report that we don't know what has gone awry
-                cause = "Unknown problems accepting request."
+                cause = "Unknown problems accepting processor."
         
         #if we have reached here something has gone wrong - report it        
-        raise RegistrationException( cause )
-        
-
+        raise PermitException( cause )
+    
+    
     #///////////////////////////////////////////////
     
     
-    def client_access( self, grant_type, redirect_uri, auth_code ):
+    def client_access( self, grant_type, client_uri, auth_code ):
         return self._access( 
             grant_type, 
-            redirect_uri, 
+            client_uri, 
             auth_code,
-            self.db.fetch_request_by_auth_code )
-    
-    
-    #///////////////////////////////////////////////
-    
-    
-    def resource_access( self, grant_type, redirect_uri, auth_code ):
-        return self._access( 
-            grant_type, 
-            redirect_uri, 
-            auth_code,
-            self.db.fetch_install_by_auth_code )
-        
-            
-    #///////////////////////////////////////////////
-    
-    
-    def _access( self, grant_type, redirect_uri, auth_code, fetch_fn ):
-
-        try:
-            if grant_type != "authorization_code" :
-                return self.format_access_failure(
-                    "unsupported_grant_type",
-                    "Grant type is either missing or incorrect"
-                )  
-                                
-            if ( redirect_uri is None or auth_code is None ) :
-                return self.format_access_failure(
-                    "invalid_request",
-                    "A valid redirect_uri and authorization code must be provided"
-                )  
-                        
-            #so far so good. Fetch the request that corresponds 
-            #to the auth_code that has been supplied
-            try:
-                access_obj = fetch_fn( auth_code )
-                
-                if access_obj == None :
-                    return self.format_access_failure(
-                        "invalid_grant", 
-                        "Authorization Code supplied is unrecognized" 
-                    )  
-                
-                if not access_obj[ "access_token" ]  :
-                    return self.format_access_failure(
-                        "server_error", 
-                        "No access token seems to be available for that code" 
-                    )
-                    
-                return self.format_access_success( access_obj[ "access_token" ] ) 
-            
-            #determine if there has been a database error
-            except MySQLdb.Error:
-                return self.format_access_failure(
-                    "server_error", 
-                    "Database problems are currently being experienced" 
-                ) 
-
-        #determine if there has been a database error
-        except Exception, e:
-            return self.format_access_failure(
-                "server_error", 
-                "An unknown error has occurred" 
-            )             
+            self.db.processor_fetch_by_auth_code )          
 
  
     #///////////////////////////////////////////////
      
     
-    def reject_request( self, user_id, request_id ):
-        
+    def client_reject( self, user_id, processor_id ):
+
         try:   
             #check that the user_id exists and is valid
-            user = self.db.fetch_user_by_id( user_id )
-    
+            user = self.db.user_fetch_by_id( user_id )
+
             if not ( user ) :
-                return self.format_failure( 
+                return self._format_failure( 
                     "A valid user ID and has not been provided." )
             
-            if not ( request_id ) :        
-                return self.format_failure( 
-                    "A valid request ID and has not been provided." )
-                    
-            #check that the request_id exists and is pending
-            access_request = self.db.fetch_request_by_id( request_id )
+            if not ( processor_id ) :        
+                return self._format_failure( 
+                    "A valid processor ID and has not been provided." )
+ 
+            #check that the processor_id exists and is pending
+            processor = self.db.processor_fetch_by_id( processor_id )
+
+            if not ( processor ) :
+                return self._format_failure( 
+                    "The processing request you are trying to reject does not exist." ) 
             
-            if not ( access_request ) :
-                return self.format_failure( 
-                    "The request you are trying to reject does not exist." ) 
-            
-            if not ( access_request[ "user_id" ] == user_id ) :
-                return self.format_failure( 
+            if not ( processor[ "user_id" ] == user_id ) :
+                return self._format_failure( 
                     "Incorrect user authentication for that request." ) 
             
-            if ( not access_request[ "request_status" ] == Status.PENDING ):
-                return self.format_failure( 
-                    "This request has already been authorized." )   
-    
-            result = self.db.delete_request( request_id )
+            if ( not processor[ "request_status" ] == Status.PENDING ):
+                return self._format_failure( 
+                    "This processing request has already been authorized." )   
+
+            result = self.db.processor_delete( processor_id )
 
             if ( not result ):
-                return self.format_failure( 
+                return self._format_failure( 
                     "Server is currently experiencing database problems. Please try again later." )     
 
             self.db.commit()
-            
-            #the request has been revoked so build the redirect url that will
-            #notify the client via the user's browser
-            return self.format_revoke_success( 
-                access_request[ "redirect_uri" ],
-                access_request[ "state" ],
-                "The user denied your request."
+
+            #the processor has been revoked so build the redirect url that
+            #will notify the client via the user's browser
+            return self._format_revoke_success( 
+                processor[ "client_uri" ],
+                processor[ "state" ],
+                "The user denied your processing request."
             )
-            
+
         except:
-            return self.format_failure( 
+            return self._format_failure( 
                 "Server is currently experiencing undetermined problems. Please try again later." )            
                 
     
     #///////////////////////////////////////////////
     
     
-    def revoke_request( self, user_id, request_id ):
+    def client_revoke( self, user_id, processor_id ):
         
         try:   
             #check that the user_id exists and is valid
-            user = self.db.fetch_user_by_id( user_id )
+            user = self.db.user_fetch_by_id( user_id )
 
             if not ( user ) :        
-                return self.format_failure( 
+                return self._format_failure( 
                     "A valid user ID and has not been provided." )
                 
-            if not ( request_id ) :
-                return self.format_failure( 
-                    "A valid request ID and has not been provided." )        
+            if not ( processor_id ) :
+                return self._format_failure( 
+                    "A valid processor ID and has not been provided." )        
                     
-            #check that the request_id exists and is pending
-            access_request = self.db.fetch_request_by_id( request_id )
+            #check that the processor_id exists and is pending
+            access_request = self.db.processor_fetch_by_id( processor_id )
 
             if not ( access_request ) :        
-                return self.format_failure( 
+                return self._format_failure( 
                     "The processing request that you are trying to revoke does not exist." ) 
             
             if not ( access_request[ "user_id" ] == user_id ) :        
-                return self.format_failure( 
-                    "Incorrect user authentication for that request." ) 
+                return self._format_failure( 
+                    "Incorrect user authentication for that processing request." ) 
                          
             if ( not access_request[ "request_status" ] == Status.ACCEPTED ):
-                return self.format_failure( 
+                return self._format_failure( 
                     "This processing request has not been authorized, and so cannot be revoked." )   
-           
+
             # contact the resource provider and tell them we have cancelled the
             # request so they should delete it, and its access_token from their records
             try:     
-                self.deregister_request( access_request )
-            except DeregisterException, e:
-                return self.format_failure(
+                self._client_revoke_request( access_request )
+                
+            except RevokeException, e:
+                return self._format_failure(
                     "Abandoned revoke - problem at Resource Provider: \"%s\"." % ( e.msg, ),
                     "resource_provider" )      
             except:
-                return self.format_failure( 
+                return self._format_failure( 
                     "Abandoned revoke - undetermined problem at Resource Provider", 
                     "resource_provider" )
-     
-            result = self.db.delete_request( request_id )
+
+            result = self.db.processor_delete( processor_id )
             
             if ( not result ):
-                return self.format_failure( 
+                return self._format_failure( 
                     "Server is currently experiencing database problems. Please try again later." )     
 
             self.db.commit()
 
-            return self.format_revoke_success( 
-                access_request[ "redirect_uri" ],
+            return self._format_revoke_success( 
+                access_request[ "client_uri" ],
                 access_request[ "state" ],
-                "The user denied your request."
+                "The user revoked your processor request."
             )
 
         except:
 
-            return self.format_failure( 
+            return self._format_failure( 
                 "Server is currently experiencing problems. \
                 Please try again later." )            
         
@@ -778,7 +782,7 @@ class AuthorizationModule( object ) :
     #///////////////////////////////////////////////
     
     
-    def deregister_request( self, request ):
+    def _client_revoke_request( self, processor ):
         
         """
             Once the user has revoked an authorization request, the catalog
@@ -787,12 +791,12 @@ class AuthorizationModule( object ) :
         
         #build up the required data parameters for the communication
         data = urllib.urlencode( {
-                'access_token': request[ "access_token" ],
-                'shared_secret': request[ "shared_secret" ],
+                'install_token': processor[ "install_token" ],
+                'access_token': processor[ "access_token" ],
             }
         )
         
-        url = "%s/deregister_request" % ( request[ "resource_uri" ], )
+        url = "%s/revoke_processor" % ( processor[ "resource_uri" ], )
         
         #if necessary setup a proxy
         if ( self._WEB_PROXY ):
@@ -806,7 +810,7 @@ class AuthorizationModule( object ) :
             response = urllib2.urlopen( req )
             output = response.read()
         except urllib2.URLError:
-            raise DeregisterException( "Resource provider uncontactable. Please Try again later." )
+            raise RevokeException( "Resource provider uncontactable. Please Try again later." )
 
         #parse the json response from the provider
         try:
@@ -816,16 +820,16 @@ class AuthorizationModule( object ) :
             )
 
         except:
-            raise DeregisterException( "Invalid json returned by the resource provider" )
+            raise RevokeException( "Invalid json returned by the resource provider" )
 
-        #determine whether the request has been successfully
-        #deregistered on the resource provider
+        #determine whether the processor has been successfully
+        #revoked by the resource provider
         try:
             success = output[ "success" ]
         except:
             #if we don't get a response then the agreed schema has
             #not been fulfilled by the resource provider. Bail.
-            raise DeregisterException( "Resource provider has not returned successfully - unknown error" )
+            raise RevokeException( "Resource provider has not returned successfully - unknown error" )
 
         #if it has then extract the access_token that will be used
         if not success:
@@ -836,13 +840,65 @@ class AuthorizationModule( object ) :
                 #if not simply report that we don't know what has gone awry
                 cause = "reason unknown"
             
-            raise DeregisterException( cause )
+            raise RevokeException( cause )
     
 
     #///////////////////////////////////////////////
+    
+    
+    def _access( self, grant_type, redirect_uri, auth_code, fetch_fn ):
+
+        try:
+            if grant_type != "authorization_code" :
+                return self._format_access_failure(
+                    "unsupported_grant_type",
+                    "Grant type is either missing or incorrect"
+                )  
+                                
+            if ( auth_code is None ) :
+                return self._format_access_failure(
+                    "invalid_request",
+                    "A valid authorization code has not been provided"
+                )  
+                        
+            #so far so good. Fetch the processor that corresponds 
+            #to the auth_code that has been supplied
+            try:
+                processor = fetch_fn( auth_code )
+                
+                if processor == None :
+                    return self._format_access_failure(
+                        "invalid_grant", 
+                        "Authorization Code supplied is unrecognized" 
+                    )  
+                
+                if not processor[ "access_token" ]  :
+                    return self._format_access_failure(
+                        "server_error", 
+                        "No access token seems to be available for that code" 
+                    )
+                    
+                return self._format_access_success( processor[ "access_token" ] ) 
+            
+            #determine if there has been a database error
+            except MySQLdb.Error:
+                return self._format_access_failure(
+                    "server_error", 
+                    "Database problems are currently being experienced" 
+                ) 
+
+        #determine if there has been a database error
+        except Exception:
+            return self._format_access_failure(
+                "server_error", 
+                "An unknown error has occurred" 
+            )   
+            
+    
+    #///////////////////////////////////////////////
         
              
-    def generateAuthorizationCode( self ):
+    def _generate_access_code( self ):
         
         token = base64.b64encode(  
             hashlib.sha256( 

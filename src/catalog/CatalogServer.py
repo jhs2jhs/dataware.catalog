@@ -4,14 +4,14 @@ Created on 12 April 2011
 """
 
 from __future__ import division
-from bottle import * #@UnusedWildImport
+from bottle import *                #@UnusedWildImport
+from CatalogDB import *             #@UnusedWildImport
+import logging                      #@Reimport
 import json
-import logging
 import urllib
-
 import OpenIDManager
 import AuthorizationModule
-from CatalogDB import *  #@UnusedWildImport
+
 
 #//////////////////////////////////////////////////////////
 # CONSTANTS
@@ -32,159 +32,24 @@ class std_writer( object ):
 
 
 #//////////////////////////////////////////////////////////
-# OPENID SPECIFIC WEB-API CALLS
-#//////////////////////////////////////////////////////////
-
-
-@route( '/login', method = "GET" )
-def openID_login():
-
-    try:
-        params = "resource_id=%s&redirect_uri=%s&state=%s" % \
-            ( request.GET[ "resource_id" ],
-              request.GET[ "redirect_uri" ], 
-              request.GET[ "state" ], )
-    except:
-        params = ""
-    
-    try: 
-        username = request.GET[ 'username' ]    
-    except: 
-        username = None
-     
-    try:      
-        provider = request.GET[ 'provider' ]
-    except: 
-        return template( 
-            'login_page_template', 
-            REALM=REALM, user=None, params=params )    
-    try:
-        url = OpenIDManager.process(
-            realm=REALM,
-            return_to=REALM + "/checkauth?" + urllib.quote( params ),
-            provider=provider,
-            username=username
-        )
-    except Exception, e:
-        return error( e )
-    
-    #Here we do a javascript redirect. A 302 redirect won't work
-    #if the calling page is within a frame (due to the requirements
-    #of some openid providers who forbid frame embedding), and the 
-    #template engine does some odd url encoding that causes problems.
-    return "<script>self.parent.location = '%s'</script>" % (url,)
-    
-
-#///////////////////////////////////////////////
-
- 
-@route( "/checkauth", method = "GET" )
-def authenticate():
-    
-    o = OpenIDManager.Response( request.GET )
-    
-    #check to see if the user logged in succesfully
-    if ( o.is_success() ):
-        
-        user_id = o.get_user_id()
-         
-        #if so check we received a viable claimed_id
-        if user_id:
-            
-            try:
-                user = db.fetch_user_by_id( user_id )
-                
-                #if this is a new user add them
-                if ( not user ):
-                    db.insert_user( o.get_user_id() )
-                    db.commit()
-                    user_name = None
-                else :
-                    user_name = user[ "user_name" ]
-                
-                set_authentication_cookie( user_id, user_name  )
-                
-            except Exception, e:
-                return error( e )
-            
-            
-        #if they don't something has gone horribly wrong, so mop up
-        else:
-            delete_authentication_cookie()
-
-    #else make sure the user is still logged out
-    else:
-        delete_authentication_cookie()
-        
-    try:
-        redirect_uri = "resource_request?resource_id=%s&redirect_uri=%s&state=%s" % \
-            ( request.GET[ "resource_id" ], 
-              request.GET[ "redirect_uri" ], 
-              request.GET[ "state" ] )
-    except:
-        redirect_uri = REALM + ROOT_PAGE
-    
-    return "<script>self.parent.location = '%s'</script>" % ( redirect_uri, )
-       
-                
-#///////////////////////////////////////////////
-
-
-@route('/logout')
-def logout():
-    delete_authentication_cookie()
-    redirect( ROOT_PAGE )
-    
-        
-#///////////////////////////////////////////////
- 
-         
-def delete_authentication_cookie():
-    response.set_cookie( 
-        key=EXTENSION_COOKIE,
-        value='',
-        max_age=-1,
-        expires=0
-    )
-            
-            
-#///////////////////////////////////////////////
-
-
-def set_authentication_cookie( user_id, user_name = None ):
-    
-    #if the user has no "user_name" it means that they
-    #haven't registered an account yet    
-    if ( not user_name ):
-        json = '{"user_id":"%s","user_name":null}' \
-            % ( user_id, )
-        
-    else:
-        json = '{"user_id":"%s","user_name":"%s"}' \
-            % ( user_id, user_name )
-         
-    response.set_cookie( EXTENSION_COOKIE, json )
-    
-
-#//////////////////////////////////////////////////////////
 # CATALOG SPECIFIC WEB-API CALLS
 #//////////////////////////////////////////////////////////
 
    
 #TODO: make sure that redirect uri's don't have a / on the end
-@route( '/resource_register', method = "POST" )
-def resource_register():
+@route( "/resource_register", method = "POST" )
+def resource_register_endpoint():
     
-    resource_name = request.forms.get( 'resource_name' )   
-    redirect_uri = request.forms.get( 'redirect_uri' )
-    description = request.forms.get( 'description' )
-    logo_uri = request.forms.get( 'logo_uri' )
-    web_uri = request.forms.get( 'web_uri' )
-    namespace = request.forms.get( 'namespace' )
+    resource_name = request.forms.get( "resource_name" )   
+    resource_uri = request.forms.get( "redirect_uri" )
+    description = request.forms.get( "description" )
+    logo_uri = request.forms.get( "logo_uri" )
+    web_uri = request.forms.get( "web_uri" )
+    namespace = request.forms.get( "namespace" )
         
     result = am.resource_register( 
         resource_name = resource_name,
-        redirect_uri = redirect_uri,
+        resource_uri = resource_uri,
         description = description,
         logo_uri = logo_uri,
         web_uri = web_uri,
@@ -202,13 +67,13 @@ def resource_register():
 #//////////////////////////////////////////////////////////
 
     
-@route( '/resource_request', method = "GET" )
-def resource_request():
+@route( "/resource_request", method = "GET" )
+def resource_request_endpoint():
 
     #first check that required parameters have beeing supplied
     try: 
         resource_id = request.GET[ "resource_id" ]
-        redirect_uri = request.GET[ "redirect_uri" ]
+        resource_uri = request.GET[ "redirect_uri" ]
         state = request.GET[ "state" ]
     except:
         return template( 'resource_request_error_template', 
@@ -216,32 +81,27 @@ def resource_request():
         );
 
     #Then check that the resource has registered
-    resource = db.fetch_resource_by_id( resource_id ) 
+    resource = db.resource_fetch_by_id( resource_id ) 
     if ( not resource ):
         return template( 'resource_request_error_template', 
            error = "Resource isn't registered with us, so cannot install."
         );
     
     #And finally check that it has supplied the correct credentials
-    if ( resource[ "redirect_uri" ] != redirect_uri ):
+    if ( resource[ "resource_uri" ] != resource_uri ):
         return template( 'resource_request_error_template', 
            error = "The resource has supplied incorrect credentials."
         );
 
     try:
-        user = check_login()
+        user = _user_check_login()
     except RegisterException, e:
         redirect( "/register" ) 
     except LoginException, e:
-        return error( e.msg )
+        return user_error( e.msg )
     except Exception, e:
-        return error( e ) 
-        
-    if ( resource[ "redirect_uri" ] != redirect_uri ):
-        return template( 'resource_request_error_template', 
-           error = "The resource has supplied incorrect credentials."
-        );
-        
+        return user_error( e ) 
+           
     return template( 'resource_request_template', 
         user=user,
         state=state,
@@ -252,26 +112,26 @@ def resource_request():
 #//////////////////////////////////////////////////////////
  
 
-@route( '/resource_authorize', method = "POST" )
-def resource_authorize():
+@route( "/resource_authorize", method = "POST" )
+def resource_authorize_endpoint():
     
     try:
-        user = check_login()
+        user = _user_check_login()
     except RegisterException, e:
         redirect( "/register" ) 
     except LoginException, e:
-        return error( e.msg )
+        return user_error( e.msg )
     except Exception, e:
-        return error( e ) 
+        return user_error( e ) 
     
-    resource_id = request.forms.get( 'resource_id' )   
-    redirect_uri = request.forms.get( 'redirect_uri' )
-    state = request.forms.get( 'state' )  
+    resource_id = request.forms.get( "resource_id" )   
+    resource_uri = request.forms.get( "redirect_uri" )
+    state = request.forms.get( "state" )  
     
     result = am.resource_authorize( 
         user,
         resource_id = resource_id,
-        redirect_uri = redirect_uri,
+        resource_uri = resource_uri,
         state = state,
     )
 
@@ -284,21 +144,41 @@ def resource_authorize():
 
 
 #//////////////////////////////////////////////////////////
+      
+
+@route( "/resource_access", method = "GET" )
+def resource_access_endpoint():
+
+    grant_type = request.GET.get( "grant_type", None )
+    resource_uri = request.GET.get( "redirect_uri", None )
+    auth_code = request.GET.get( "code", None )    
+                
+    result = am.resource_access( 
+        grant_type = grant_type,
+        resource_uri = resource_uri,
+        auth_code = auth_code 
+    )
+
+    return result
 
 
-@route( '/client_register', method = "POST" )
-def client_register():
+#//////////////////////////////////////////////////////////
+
+
+@route( "/client_register", method = "POST" )
+def client_register_endpoint():
     
-    client_name = request.forms.get( 'client_name' )   
-    redirect_uri = request.forms.get( 'redirect_uri' )
-    description = request.forms.get( 'description' )
-    logo_uri = request.forms.get( 'logo_uri' )
-    web_uri = request.forms.get( 'web_uri' )
-    namespace = request.forms.get( 'namespace' )
+    client_name = request.forms.get( "client_name" )   
+    namespace = request.forms.get( "namespace" )
+    client_uri = request.forms.get( "redirect_uri" )
+    description = request.forms.get( "description" )
+    logo_uri = request.forms.get( "logo_uri" )
+    web_uri = request.forms.get( "web_uri" )
+    
         
     result = am.client_register( 
         client_name = client_name,
-        redirect_uri = redirect_uri,
+        client_uri = client_uri,
         description = description,
         logo_uri = logo_uri,
         web_uri = web_uri,
@@ -316,19 +196,19 @@ def client_register():
 #//////////////////////////////////////////////////////////
 
     
-@route( '/user/:user_name/client_request', method = "POST" )
-def client_request( user_name = None ):
+@route( "/user/:user_name/client_request", method = "POST" )
+def client_request_endpoint( user_name = None ):
 
-    client_id = request.forms.get( 'client_id' )
-    state = request.forms.get( 'state' )
-    redirect_uri = request.forms.get( 'redirect_uri' )
-    json_scope = request.forms.get( 'scope' )
-    
+    client_id = request.forms.get( "client_id" )
+    state = request.forms.get( "state" )
+    client_uri = request.forms.get( "redirect_uri" )
+    json_scope = request.forms.get( "scope" )
+
     result = am.client_request( 
         user_name = user_name,
         client_id = client_id,
         state = state,
-        redirect_uri = redirect_uri,
+        client_uri = client_uri,
         json_scope = json_scope 
     )
     
@@ -343,144 +223,124 @@ def client_request( user_name = None ):
 #//////////////////////////////////////////////////////////
  
 
-@route( '/client_client', method = "POST" )
-def client_authorize():
+@route( "/client_authorize", method = "POST" )
+def client_authorize_endpoint():
     
     #by this point the user has authenticated and will have
-    #a cookie identifying themselves. This is used to extract
+    #a cookie identifying themselves, and this is used to extract
     #their id. This will be an openid (working as an access key),
     #even though they have a publically exposed username. This
     #api call involves interaction via the user's web agent so
     #will redirect the user to the client if the access request
-    #acceptance is successful, or display an appropriate error page
+    #acceptance is successful, or display an appropriate user_error page
     #otherwise (e.g. if the resource provider rejects the request.
 
     try:
-        user = check_login()
+        user = _user_check_login()
     except RegisterException, e:
         redirect( "/register" ) 
     except LoginException, e:
-        return error( e.msg )
+        return user_error( e.msg )
     except Exception, e:
-        return error( e ) 
+        return user_error( e ) 
     
-    request_id = request.forms.get( 'request_id' )
+    processor_id = request.forms.get( 'processor_id' )
 
     url = am.client_authorize( 
         user_id = user[ "user_id" ],
-        request_id = request_id,
+        processor_id = processor_id,
     )
 
     log.debug( 
         "Catalog_server: Authorization Request from %s for request %s completed" 
-        % ( user[ "user_id"], request_id ) 
+        % ( user[ "user_id"], processor_id ) 
     )
 
     return url
 
-    
-    
-#//////////////////////////////////////////////////////////
-      
-
-@route( '/client_access', method = "GET" )
-def client_access():
-
-    grant_type = request.GET.get( "grant_type", None )
-    redirect_uri = request.GET.get( "redirect_uri", None )
-    auth_code = request.GET.get( "code", None )    
-        
-    result = am.client_access( 
-        grant_type = grant_type,
-        redirect_uri = redirect_uri,
-        auth_code = auth_code 
-    )
-    
-    return result
-
-
-#//////////////////////////////////////////////////////////
-      
-
-@route( '/resource_access', method = "GET" )
-def resource_access():
-
-    grant_type = request.GET.get( "grant_type", None )
-    redirect_uri = request.GET.get( "redirect_uri", None )
-    auth_code = request.GET.get( "code", None )    
-                
-    result = am.resource_access( 
-        grant_type = grant_type,
-        redirect_uri = redirect_uri,
-        auth_code = auth_code 
-    )
-
-    return result
-
 
 #//////////////////////////////////////////////////////////   
       
 
-@route( '/reject_client', method = "POST" )
-def reject_client():
+@route( "/client_reject", method = "POST" )
+def client_reject_endpoint():
     
     try:
-        user = check_login()
+        user = _user_check_login()
     except RegisterException, e:
         redirect( "/register" ) 
     except LoginException, e:
-        return error( e.msg )
+        return user_error( e.msg )
     except Exception, e:
-        return error( e ) 
+        return user_error( e ) 
     
-    request_id = request.forms.get( 'request_id' )
-
-    result = am.reject_request( 
-        user_id = user["user_id"],
-        request_id = request_id,
+    processor_id = request.forms.get( 'processor_id' )
+    
+    result = am.client_reject( 
+        user_id = user[ "user_id" ],
+        processor_id = processor_id,
     )
 
     log.debug( 
         "Catalog_server: Request rejection from %s for request %s" 
-        % ( user["user_id"], request_id ) 
+        % ( user[ "user_id" ], processor_id ) 
     )
 
+    return result
+
+    
+#//////////////////////////////////////////////////////////
+      
+
+@route( "/client_access", method = "GET" )
+def client_access_endpoint():
+
+    grant_type = request.GET.get( "grant_type", None )
+    client_uri = request.GET.get( "redirect_uri", None )
+    auth_code = request.GET.get( "code", None )    
+        
+    result = am.client_access( 
+        grant_type = grant_type,
+        client_uri = client_uri,
+        auth_code = auth_code 
+    )
+    
     return result
 
     
 #//////////////////////////////////////////////////////////   
 
 
-@route( '/revoke_request', method = "POST" )
-def revoke_request():
+@route( "/client_revoke", method = "POST" )
+def client_revoke_enpdpoint():
     
     try:
-        user = check_login()
+        user = _user_check_login()
     except RegisterException, e:
         redirect( "/register" ) 
     except LoginException, e:
-        return error( e.msg )
+        return user_error( e.msg )
     except Exception, e:
-        return error( e ) 
+        return user_error( e ) 
     
-    request_id = request.forms.get( 'request_id' )
+    processor_id = request.forms.get( "processor_id" )
 
 
-    result = am.revoke_request( 
-        user_id = user["user_id"],
-        request_id = request_id,
+    result = am.client_revoke( 
+        user_id = user[ "user_id" ],
+        processor_id = processor_id,
     )
 
     log.debug( 
         "Catalog_server: Request %s has been successfully revoked by %s" \
-         % ( request_id, user["user_id"] ) 
+         % ( processor_id, user["user_id"] ) 
     )
     
     return result
+                           
                             
-
 #//////////////////////////////////////////////////////////
-# CATALOG SPECIFIC WEB-API CALLS
+# OPENID SPECIFIC WEB-API CALLS
 #//////////////////////////////////////////////////////////
 
 
@@ -500,30 +360,129 @@ class RegisterException ( Exception ):
 #///////////////////////////////////////////////
 
 
-def valid_email( str ):
-    return re.search( "^[A-Za-z0-9%._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$", str )
+@route( "/login", method = "GET" )
+def user_openid_login():
 
+    try:
+        params = "resource_id=%s&redirect_uri=%s&state=%s" % \
+            ( request.GET[ "resource_id" ],
+              request.GET[ "redirect_uri" ], 
+              request.GET[ "state" ], )
+    except:
+        params = ""
+    
+    try: 
+        username = request.GET[ "username" ]    
+    except: 
+        username = None
+     
+    try:      
+        provider = request.GET[ "provider" ]
+    except: 
+        return template( 
+            "login_page_template", 
+            REALM=REALM, user=None, params=params )    
+    try:
+        url = OpenIDManager.process(
+            realm=REALM,
+            return_to=REALM + "/checkauth?" + urllib.quote( params ),
+            provider=provider,
+            username=username
+        )
+    except Exception, e:
+        return user_error( e )
+    
+    #Here we do a javascript redirect. A 302 redirect won't work
+    #if the calling page is within a frame (due to the requirements
+    #of some openid providers who forbid frame embedding), and the 
+    #template engine does some odd url encoding that causes problems.
+    return "<script>self.parent.location = '%s'</script>" % (url,)
+    
 
 #///////////////////////////////////////////////
 
+ 
+@route( "/checkauth", method = "GET" )
+def user_openid_authenticate():
+    
+    o = OpenIDManager.Response( request.GET )
+    
+    #check to see if the user logged in succesfully
+    if ( o.is_success() ):
+        
+        user_id = o.get_user_id()
+         
+        #if so check we received a viable claimed_id
+        if user_id:
+            
+            try:
+                user = db.user_fetch_by_id( user_id )
+                
+                #if this is a new user add them
+                if ( not user ):
+                    db.user_insert( o.get_user_id() )
+                    db.commit()
+                    user_name = None
+                else :
+                    user_name = user[ "user_name" ]
+                
+                _set_authentication_cookie( user_id, user_name  )
+                
+            except Exception, e:
+                return user_error( e )
+            
+            
+        #if they don't something has gone horribly wrong, so mop up
+        else:
+            _delete_authentication_cookie()
 
-def valid_name( str ):
-    return re.search( "^[A-Za-z0-9 ']{3,64}$", str )
-
-
+    #else make sure the user is still logged out
+    else:
+        _delete_authentication_cookie()
+        
+    try:
+        redirect_uri = "resource_request?resource_id=%s&redirect_uri=%s&state=%s" % \
+            ( request.GET[ "resource_id" ], 
+              request.GET[ "redirect_uri" ], 
+              request.GET[ "state" ] )
+    except:
+        redirect_uri = REALM + ROOT_PAGE
+    
+    return "<script>self.parent.location = '%s'</script>" % ( redirect_uri, )
+       
+                
 #///////////////////////////////////////////////
 
 
-@route( '/register', method = "GET" )
-def register():
+@route( "/logout" )
+def user_openid_logout():
+    _delete_authentication_cookie()
+    redirect( ROOT_PAGE )
+    
+
+#///////////////////////////////////////////////  
+    
+    
+@route( "/static/:filename" )
+def user_get_static_file( filename ):
+    return static_file( filename, root='static/' )
+
+
+#//////////////////////////////////////////////////////////
+# CATALOG SPECIFIC WEB-API CALLS
+#//////////////////////////////////////////////////////////
+
+
+@route( "/register", method = "GET" )
+def user_register():
     
     #TODO: first check the user is logged in!
     try:
-        user_id = extract_user_id()
+        user_id = _user_extract_id()
     except LoginException, e:
-        return error( e.msg )
+        return user_error( e.msg )
     except Exception, e:
-        return error( e )
+        return user_error( e )
     
     errors = {}
     
@@ -538,10 +497,10 @@ def register():
         #validate the user_name supplied by the user
         try:
             user_name = request.GET[ "user_name" ]
-            if ( not valid_name( user_name ) ):
+            if ( not _valid_name( user_name ) ):
                 errors[ 'user_name' ] = "Must be 3-64 legal characters"
             else: 
-                match = db.fetch_user_by_name( user_name ) 
+                match = db.user_fetch_by_name( user_name ) 
                 if ( not match is None ):
                     errors[ 'user_name' ] = "That name has already been taken"                    
         except:
@@ -551,10 +510,10 @@ def register():
         try:
             email = request.GET[ "email" ]
 
-            if ( not valid_email( email ) ):
+            if ( not _valid_email( email ) ):
                 errors[ 'email' ] = "The supplied email address is invalid"
             else: 
-                match = db.fetch_user_by_email( email ) 
+                match = db.user_fetch_by_email( email ) 
                 if ( not match is None ):
                     errors[ 'email' ] = "That email has already been taken"
         except:
@@ -564,15 +523,15 @@ def register():
         #if everything is okay so far, add the data to the database    
         if ( len( errors ) == 0 ):
             try:
-                match = db.insert_registration( user_id, user_name, email) 
+                match = db.user_register( user_id, user_name, email) 
                 db.commit()
             except Exception, e:
-                return error( e )
+                return user_error( e )
 
             #update the cookie with the new details
-            set_authentication_cookie( user_id, user_name )
+            _set_authentication_cookie( user_id, user_name )
             
-            #return the user to the home page
+            #return the user to the user_home page
             redirect( ROOT_PAGE )
     
     else:
@@ -582,7 +541,7 @@ def register():
     #if this is the first visit to the page, or there are errors
 
     return template( 
-        'register_page_template',
+        "register_page_template",
         REALM=REALM,  
         user=None, 
         email=email,
@@ -590,18 +549,86 @@ def register():
         errors=errors ) 
     
 
+#///////////////////////////////////////////////  
+    
+    
+@route( "/audit" )
+def user_audit():
+    
+    PREVIEW_ROWS = 10
+    
+    try:
+        user = _user_check_login()
+        if ( not user ) : redirect( ROOT_PAGE ) 
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return user_error( e.msg )
+    except Exception, e:
+        return user_error( e )  
+    
+    processors = db.processors_fetch( user[ "user_id" ] )
+    
+    for processor in processors:
+        try:
+            index = [ m.start() for m in re.finditer( r"\n", processor[ "query" ]) ][ PREVIEW_ROWS ]
+            processor[ "preview" ] = "%s\n..." % request[ "query" ][ 0:index ]
+        except:
+            processor[ "preview" ] = processor[ "query" ]
+        
+    return template( 
+        "audit_page_template", 
+        REALM=REALM, 
+        user=user, 
+        processors=processors
+    );
+    
+
+#///////////////////////////////////////////////  
+
+
+@route( "/", method = "GET" )     
+@route( "/home", method = "GET" )
+def user_home( ):
+
+    try:
+        user = _user_check_login()
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return user_error( e.msg )
+    except Exception, e:
+        return user_error( e )  
+    
+    return template( "home_page_template", REALM=REALM, user=user );
+       
+     
 #///////////////////////////////////////////////
 
 
-@route( '/error', method = "GET" )
-def error( e ):
-    return  "An error has occurred: %s" % ( e )
+@route( "/error", method = "GET" )
+def user_error( e ):
+    return  "A user_error has occurred: %s" % ( e )
+
+
+#///////////////////////////////////////////////
+
+
+def _valid_email( str ):
+    return re.search( "^[A-Za-z0-9%._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$", str )
+
+
+#///////////////////////////////////////////////
+
+
+def _valid_name( str ):
+    return re.search( "^[A-Za-z0-9 ']{3,64}$", str )
 
       
 #///////////////////////////////////////////////  
     
     
-def extract_user_id():
+def _user_extract_id():
     
     cookie = request.get_cookie( EXTENSION_COOKIE )
         
@@ -611,7 +638,7 @@ def extract_user_id():
         try:
             data = json.loads( cookie )
         except:
-            delete_authentication_cookie()
+            _delete_authentication_cookie()
             raise LoginException( "Your login data is corrupted. Resetting." )
         
         #and then that it contains a valid user_id
@@ -619,7 +646,7 @@ def extract_user_id():
             user_id =  data[ "user_id" ]
             return user_id
         except:
-            delete_authentication_cookie()
+            _delete_authentication_cookie()
             raise LoginException( "You are logged in but have no user_id. Resetting." )
     else:
         return None
@@ -628,19 +655,19 @@ def extract_user_id():
 #///////////////////////////////////////////////  
     
     
-def check_login():
+def _user_check_login():
 
     #first try and extract the user_id from the cookie. 
     #n.b. this can generate LoginExceptions
-    user_id = extract_user_id()
+    user_id = _user_extract_id()
     
     if ( user_id ) :
         
         #we should have a record of this id, from when it was authenticated
-        user = db.fetch_user_by_id( user_id )
+        user = db.user_fetch_by_id( user_id )
         
         if ( not user ):
-            delete_authentication_cookie()
+            _delete_authentication_cookie()
             raise LoginException( "We have no record of the id supplied. Resetting." )
         
         #and finally lets check to see if the user has registered their details
@@ -653,68 +680,36 @@ def check_login():
     else:
         return None   
 
-#///////////////////////////////////////////////  
-    
-    
-@route('/audit')
-def audit():
-    
-    PREVIEW_ROWS = 10
-    
-    try:
-        user = check_login()
-        if ( not user ) : redirect( ROOT_PAGE ) 
-    except RegisterException, e:
-        redirect( "/register" ) 
-    except LoginException, e:
-        return error( e.msg )
-    except Exception, e:
-        return error( e )  
-    
-    requests = db.fetch_requests( user[ "user_id" ] )
-    
-    for request in requests:
-        try:
-            index = [ m.start() for m in re.finditer( r"\n", request[ "query" ]) ][ PREVIEW_ROWS ]
-            request[ "preview" ] = "%s\n..." % request[ "query" ][ 0:index ]
-        except:
-            request[ "preview" ] = request[ "query" ]
         
-    return template( 
-        'audit_page_template', 
-        REALM=REALM, 
-        user=user, 
-        requests=requests
-    );
-    
-        
-#///////////////////////////////////////////////  
-    
-    
-@route('/static/:filename')
-def get_static_file( filename ):
-    return static_file( filename, root='static/' )
-
-
-#///////////////////////////////////////////////  
-
-
-@route( '/', method = "GET" )     
-@route( '/home', method = "GET" )
-def home( ):
-
-    try:
-        user = check_login()
-    except RegisterException, e:
-        redirect( "/register" ) 
-    except LoginException, e:
-        return error( e.msg )
-    except Exception, e:
-        return error( e )  
-    
-    return template( 'home_page_template', REALM=REALM, user=user );
-       
+#///////////////////////////////////////////////
  
+         
+def _delete_authentication_cookie():
+    response.set_cookie( 
+        key=EXTENSION_COOKIE,
+        value='',
+        max_age=-1,
+        expires=0
+    )
+            
+            
+#///////////////////////////////////////////////
+
+
+def _set_authentication_cookie( user_id, user_name = None ):
+    
+    #if the user has no "user_name" it means that they
+    #haven't registered an account yet    
+    if ( not user_name ):
+        json = '{"user_id":"%s","user_name":null}' \
+            % ( user_id, )
+        
+    else:
+        json = '{"user_id":"%s","user_name":"%s"}' \
+            % ( user_id, user_name )
+         
+    response.set_cookie( EXTENSION_COOKIE, json )
+    
     
 #//////////////////////////////////////////////////////////
       
@@ -772,7 +767,7 @@ if __name__ == '__main__' :
     
     try:
         debug( True )
-        run( host='0.0.0.0', port=PORT, quiet=False )
+        run( host="0.0.0.0", port=PORT, quiet=False )
     except Exception, e:
         log.error( "Web Server Exception: %s" % ( e, ) )
         exit()
