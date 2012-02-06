@@ -29,7 +29,7 @@ class Status( object ):
     
     
 class AuthorizationException ( Exception ):
-    def __init__(self, msg):
+    def __init__( self, msg ):
         self.msg = msg
         
 
@@ -37,7 +37,7 @@ class AuthorizationException ( Exception ):
 
 
 class PermitException ( Exception ):
-    def __init__(self, msg):
+    def __init__( self, msg ):
         self.msg = msg
 
 
@@ -45,7 +45,7 @@ class PermitException ( Exception ):
 
 
 class RejectionException ( Exception ):
-    def __init__(self, msg):
+    def __init__( self, msg ):
         self.msg = msg
 
 
@@ -53,7 +53,7 @@ class RejectionException ( Exception ):
 
 
 class RevocationException ( Exception ):
-    def __init__(self, msg):
+    def __init__( self, msg ):
         self.msg = msg
         
                    
@@ -61,7 +61,7 @@ class RevocationException ( Exception ):
 
 
 class RevokeException ( Exception ):
-    def __init__(self, msg):
+    def __init__( self, msg ):
         self.msg = msg
        
                    
@@ -530,7 +530,7 @@ class AuthorizationModule( object ) :
     
     
     def client_authorize( self, user_id, processor_id ):
-        
+
         try:
             #check that the user_id exists and is valid
             user = self.db.user_fetch_by_id( user_id )
@@ -568,20 +568,19 @@ class AuthorizationModule( object ) :
             if not ( install ) :
                 return self._format_failure( 
                     "You do not have the targeted resource installed" ) 
-           
         
             #contact the resource provider and fetch the access token  
             try:    
                 access_token = self._client_permit_request( processor, install )
-                
+
             except PermitException, e:
                 #the processing request has been rejected by the resource_provider
                 #so we have to return a failure redirect url and mop up
                 result = self.db.processor_delete( processor_id )
                 self.db.commit()
-                
+
                 return self._format_auth_failure(
-                    processor[ "redirect_uri" ],
+                    processor[ "client_uri" ],
                     processor[ "state" ],
                     e.msg )
             except:
@@ -624,6 +623,7 @@ class AuthorizationModule( object ) :
     
       
     def _client_permit_request( self, processor, install ):
+        
         """
             Once the user has accepted an authorization request, the catalog
             must check that the resource provider is happy to permit the query 
@@ -653,6 +653,7 @@ class AuthorizationModule( object ) :
             req = urllib2.Request( url, data )
             response = urllib2.urlopen( req )
             output = response.read()
+            
         except urllib2.URLError, e:
             raise PermitException( "Failure - could not contact resource provider (%s)" % e )
         
@@ -691,7 +692,7 @@ class AuthorizationModule( object ) :
                 #if not simply report that we don't know what has gone awry
                 cause = "Unknown problems accepting processor."
         
-        #if we have reached here something has gone wrong - report it        
+        #if we have reached here something has gone wrong - report it  
         raise PermitException( cause )
     
     

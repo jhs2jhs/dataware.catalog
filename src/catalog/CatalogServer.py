@@ -230,7 +230,7 @@ def client_request_endpoint( user_name = None ):
 
 @route( "/client_authorize", method = "POST" )
 def client_authorize_endpoint():
-    
+
     #by this point the user has authenticated and will have
     #a cookie identifying themselves, and this is used to extract
     #their id. This will be an openid (working as an access key),
@@ -251,17 +251,17 @@ def client_authorize_endpoint():
     
     processor_id = request.forms.get( 'processor_id' )
 
-    url = am.client_authorize( 
+    result = am.client_authorize( 
         user_id = user[ "user_id" ],
         processor_id = processor_id,
     )
-
+    
     log.debug( 
         "Catalog_server: Authorization Request from %s for request %s completed" 
         % ( user[ "user_id"], processor_id ) 
     )
 
-    return url
+    return result
 
 
 #//////////////////////////////////////////////////////////   
@@ -329,7 +329,6 @@ def client_revoke_enpdpoint():
         return user_error( e ) 
     
     processor_id = request.forms.get( "processor_id" )
-
 
     result = am.client_revoke( 
         user_id = user[ "user_id" ],
