@@ -581,7 +581,7 @@ def user_audit():
     for processor in processors:
         try:
             index = [ m.start() for m in re.finditer( r"\n", processor[ "query" ]) ][ PREVIEW_ROWS ]
-            processor[ "preview" ] = "%s\n..." % request[ "query" ][ 0:index ]
+            processor[ "preview" ] = "%s\n..." % processor[ "query" ][ 0:index ]
         except:
             processor[ "preview" ] = processor[ "query" ]
         
