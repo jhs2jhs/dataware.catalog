@@ -345,6 +345,7 @@ def client_revoke_enpdpoint():
 
 
 class LoginException ( Exception ):
+    
     def __init__(self, msg):
         self.msg = msg
 
@@ -354,6 +355,7 @@ class LoginException ( Exception ):
 
 class RegisterException ( Exception ):
     """Base class for RegisterException in this module."""
+    
     pass
 
     
@@ -456,6 +458,7 @@ def user_openid_authenticate():
 
 @route( "/logout" )
 def user_openid_logout():
+    
     _delete_authentication_cookie()
     redirect( ROOT_PAGE )
     
@@ -465,6 +468,7 @@ def user_openid_logout():
     
 @route( "/static/:filename" )
 def user_get_static_file( filename ):
+    
     return static_file( filename, root='static/' )
 
 
@@ -608,6 +612,7 @@ def user_home( ):
 
 @route( "/error", method = "GET" )
 def user_error( e ):
+    
     return  "A user_error has occurred: %s" % ( e )
 
 
@@ -615,6 +620,7 @@ def user_error( e ):
 
 
 def _valid_email( str ):
+    
     return re.search( "^[A-Za-z0-9%._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$", str )
 
 
@@ -622,6 +628,7 @@ def _valid_email( str ):
 
 
 def _valid_name( str ):
+    
     return re.search( "^[A-Za-z0-9 ']{3,64}$", str )
 
       
