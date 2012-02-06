@@ -45,7 +45,7 @@ class CatalogDB( object ):
     TBL_CATALOG_CLIENTS = 'tblCatalogClients'
     TBL_CATALOG_RESOURCES = 'tblCatalogResources'
     TBL_CATALOG_INSTALLS = 'tblCatalogInstalls'    
-    TBL_CATALOG_PROCESSORS = 'tblCatalogRequests'
+    TBL_CATALOG_PROCESSORS = 'tblCatalogProcessors'
     
     CONFIG_FILE = "catalog.cfg"
     SECTION_NAME = "CatalogDB"
