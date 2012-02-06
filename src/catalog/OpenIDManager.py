@@ -71,6 +71,7 @@ def discover( discovery_url ):
         provider (first by xdrs and then by html discovery).
         If this fails and exception will be thrown by the regex.
     """
+    
     result = urllib.urlopen( discovery_url ).read()
     m = re.search( "<URI>(.*)</URI>", result )
     if m is None :
@@ -161,6 +162,7 @@ class Response( object ):
 
             
     def __init__( self, params ):
+        
         self.__params = params
         
         result = self.__params[ "openid.mode" ]
@@ -176,6 +178,7 @@ class Response( object ):
     
     
     def get( self, key ):
+        
         return self.__params[ key ]
     
     
@@ -183,6 +186,7 @@ class Response( object ):
     
     
     def get_user_id( self ):
+        
         try:
             return self.__params[ "openid.claimed_id" ]
         except:
@@ -192,5 +196,6 @@ class Response( object ):
     #///////////////////////////////////////////////
     
     def is_success( self ):
+        
         return self.success
     

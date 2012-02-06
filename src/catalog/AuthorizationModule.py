@@ -20,16 +20,18 @@ log = logging.getLogger( "console_log" )
 
 
 class Status( object ):
+    
     PENDING = "PENDING"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"  
    
 #///////////////////////////////////////////////
     
+    
 class AuthorizationException ( Exception ):
     def __init__(self, msg):
         self.msg = msg
-
+        
 
 #///////////////////////////////////////////////  
 
@@ -94,6 +96,7 @@ class AuthorizationModule( object ) :
         
             
     #///////////////////////////////////////////////
+    
     
     def _format_submission_success( self, result = None ):
         

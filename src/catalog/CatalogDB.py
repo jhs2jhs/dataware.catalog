@@ -38,7 +38,6 @@ def safety_mysql( fn ) :
 
     
 class CatalogDB( object ):
-    ''' classdocs '''
     
     DB_NAME = 'catalog'
     
@@ -51,10 +50,8 @@ class CatalogDB( object ):
     CONFIG_FILE = "catalog.cfg"
     SECTION_NAME = "CatalogDB"
     
-    
     #///////////////////////////////////////
-
-            
+      
     createQueries = { 
                
         TBL_CATALOG_USERS : """
@@ -136,7 +133,6 @@ class CatalogDB( object ):
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
         """  % ( DB_NAME, TBL_CATALOG_PROCESSORS, TBL_CATALOG_INSTALLS ),      
     } 
-    
         
     #///////////////////////////////////////
     
@@ -178,6 +174,7 @@ class CatalogDB( object ):
     
     
     def reconnect( self ):
+        
         log.info( "%s: Database reconnection process activated..." % self.name );
         self.close()
         self.connect()
@@ -188,6 +185,7 @@ class CatalogDB( object ):
           
     @safety_mysql                
     def commit( self ) : 
+        
         self.conn.commit();
         
         
@@ -195,6 +193,7 @@ class CatalogDB( object ):
         
 
     def close( self ) :   
+        
         if self.conn.open:
             log.info( "%s: disconnecting from mysql database..." % self.name );
             self.cursor.close();
@@ -397,10 +396,13 @@ class CatalogDB( object ):
 
     @safety_mysql                
     def client_fetch_by_id( self, client_id ) :
+        
         if not client_id: return None
+        
         query = "SELECT * FROM %s.%s WHERE client_id = %s" % \
             ( self.DB_NAME, self.TBL_CATALOG_CLIENTS, '%s', )
         self.cursor.execute( query, ( client_id, ) )
+        
         return self.cursor.fetchone()
         
     
@@ -409,10 +411,13 @@ class CatalogDB( object ):
 
     @safety_mysql                
     def client_fetch_by_name( self, client_name ) :
+        
         if not client_name: return None
+        
         query = "SELECT * FROM %s.%s WHERE client_name = %s" % \
             ( self.DB_NAME, self.TBL_CATALOG_CLIENTS, '%s', )
         self.cursor.execute( query, ( client_name, ) )
+        
         return self.cursor.fetchone()   
                       
   
@@ -449,9 +454,11 @@ class CatalogDB( object ):
     def resource_fetch_by_id( self, resource_id ) :
         
         if not resource_id: return None
+        
         query = "SELECT * FROM %s.%s WHERE resource_id = %s" % \
             ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, '%s', )
         self.cursor.execute( query, ( resource_id, ) )
+        
         return self.cursor.fetchone()
         
     
@@ -462,8 +469,10 @@ class CatalogDB( object ):
     def resource_fetch_by_name( self, resource_name ) :
         
         if not resource_name: return None
+        
         query = "SELECT * FROM %s.%s WHERE resource_name = %s" % \
             ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, '%s', )
+            
         self.cursor.execute( query, ( resource_name, ) )
         return self.cursor.fetchone()   
     
@@ -501,9 +510,11 @@ class CatalogDB( object ):
     def install_fetch_by_id( self, user_id, resource_id ) :
         
         if not resource_id: return None
+        
         query = "SELECT * FROM %s.%s WHERE user_id = %s AND resource_id = %s" % \
             ( self.DB_NAME, self.TBL_CATALOG_INSTALLS, '%s', '%s' )
         self.cursor.execute( query, ( user_id, resource_id, ) )
+        
         return self.cursor.fetchone()
     
     
