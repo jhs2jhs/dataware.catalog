@@ -820,24 +820,30 @@ class AuthorizationModule( object ) :
                     "A valid processor ID and has not been provided." )        
                     
             #check that the processor_id exists and is pending
-            access_request = self.db.processor_fetch_by_id( processor_id )
+            processor = self.db.processor_fetch_by_id( processor_id )
 
-            if not ( access_request ) :        
+            if not ( processor ) :        
                 return self._format_failure( 
                     "The processing request that you are trying to revoke does not exist." ) 
             
-            if not ( access_request[ "user_id" ] == user_id ) :        
+            if not ( processor[ "user_id" ] == user_id ) :        
                 return self._format_failure( 
                     "Incorrect user authentication for that processing request." ) 
                          
-            if ( not access_request[ "request_status" ] == Status.ACCEPTED ):
+            if ( not processor[ "request_status" ] == Status.ACCEPTED ):
                 return self._format_failure( 
                     "This processing request has not been authorized, and so cannot be revoked." )   
+
+            install = self.db.install_fetch_by_id( user_id, processor[ "resource_id" ] )
+            
+            if ( not install ):
+                return self._format_failure( 
+                    "Could not find credentials for communicating with the resource provider." )   
 
             # contact the resource provider and tell them we have cancelled the
             # request so they should delete it, and its access_token from their records
             try:     
-                self._client_revoke_request( access_request )
+                self._client_revoke_request( processor, install[ "install_token" ] )
                 
             except RevokeException, e:
                 return self._format_failure(
@@ -857,8 +863,8 @@ class AuthorizationModule( object ) :
             self.db.commit()
 
             return self._format_revoke_success( 
-                access_request[ "client_uri" ],
-                access_request[ "state" ],
+                processor[ "client_uri" ],
+                processor[ "state" ],
                 "The user revoked your processor request."
             )
 
@@ -872,8 +878,7 @@ class AuthorizationModule( object ) :
     #///////////////////////////////////////////////
     
     
-    def _client_revoke_request( self, processor ):
-        
+    def _client_revoke_request( self, processor, install_token ):
         """
             Once the user has revoked an authorization request, the catalog
             must tell the resource provider to deregister that query 
@@ -881,13 +886,13 @@ class AuthorizationModule( object ) :
         
         #build up the required data parameters for the communication
         data = urllib.urlencode( {
-                'install_token': processor[ "install_token" ],
+                'install_token': install_token,
                 'access_token': processor[ "access_token" ],
             }
         )
-        
+
         url = "%s/revoke_processor" % ( processor[ "resource_uri" ], )
-        
+
         #if necessary setup a proxy
         if ( self._WEB_PROXY ):
             proxy = urllib2.ProxyHandler( self._WEB_PROXY )
@@ -899,6 +904,7 @@ class AuthorizationModule( object ) :
             req = urllib2.Request( url, data )
             response = urllib2.urlopen( req )
             output = response.read()
+            
         except urllib2.URLError:
             raise RevokeException( "Resource provider uncontactable. Please Try again later." )
 
@@ -924,12 +930,12 @@ class AuthorizationModule( object ) :
         #if it has then extract the access_token that will be used
         if not success:
             try:
-                #if there is a problem we should have been sent a cause
-                cause = output[ "error" ][ "message" ]
+                #if there is a problem we should have been sent a cause                
+                cause = output[ "error_description" ]
             except:
                 #if not simply report that we don't know what has gone awry
                 cause = "reason unknown"
-            
+
             raise RevokeException( cause )
         
     
