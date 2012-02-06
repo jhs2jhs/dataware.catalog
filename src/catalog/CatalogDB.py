@@ -534,7 +534,7 @@ class CatalogDB( object ):
 
     @safety_mysql                
     def install_fetch_by_auth_code( self, auth_code ) :
-
+        
         if auth_code :
             query = """
                 SELECT * FROM %s.%s t where auth_code = %s 
