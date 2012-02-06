@@ -335,11 +335,55 @@ class AuthorizationModule( object ) :
     
     
     def resource_access( self, grant_type, resource_uri, auth_code ):
-        return self._access( 
-            grant_type, 
-            resource_uri, 
-            auth_code,
-            self.db.install_fetch_by_auth_code )
+        
+        try:
+
+            if grant_type != "authorization_code" :
+                return self._format_access_failure(
+                    "unsupported_grant_type",
+                    "Grant type is either missing or incorrect"
+                )  
+                                
+            if ( auth_code is None ) :
+                return self._format_access_failure(
+                    "invalid_request",
+                    "A valid authorization code has not been provided"
+                )  
+
+            #so far so good. Fetch the request that corresponds 
+            #to the auth_code that has been supplied
+            try:
+                resource = self.db.install_fetch_by_auth_code( auth_code )
+                
+                if resource == None :
+                    return self._format_access_failure(
+                        "invalid_grant", 
+                        "Authorization Code supplied is unrecognized" 
+                    )  
+                
+                if not resource[ "install_token" ]  :
+                    return self._format_access_failure(
+                        "server_error", 
+                        "No access token seems to be available for that code" 
+                    )
+            
+                return self._format_access_success( resource[ "install_token" ] ) 
+            
+            #determine if there has been a database error
+            except MySQLdb.Error:
+                return self._format_access_failure(
+                    "server_error", 
+                    "Database problems are currently being experienced" 
+                ) 
+
+        #determine if there has been a database error
+        except Exception:
+            return self._format_access_failure(
+                "server_error", 
+                "An unknown error has occurred" 
+            )   
+            
+
         
 
     #///////////////////////////////////////////////
@@ -652,11 +696,53 @@ class AuthorizationModule( object ) :
     
     
     def client_access( self, grant_type, client_uri, auth_code ):
-        return self._access( 
-            grant_type, 
-            client_uri, 
-            auth_code,
-            self.db.processor_fetch_by_auth_code )          
+         
+        try:
+
+            if grant_type != "authorization_code" :
+                return self._format_access_failure(
+                    "unsupported_grant_type",
+                    "Grant type is either missing or incorrect"
+                )  
+                                
+            if ( auth_code is None ) :
+                return self._format_access_failure(
+                    "invalid_request",
+                    "A valid authorization code has not been provided"
+                )  
+
+            #so far so good. Fetch the request that corresponds 
+            #to the auth_code that has been supplied
+            try:
+                processor = self.db.processor_fetch_by_auth_code( auth_code )
+                
+                if processor == None :
+                    return self._format_access_failure(
+                        "invalid_grant", 
+                        "Authorization Code supplied is unrecognized" 
+                    )  
+                
+                if not processor[ "access_token" ]  :
+                    return self._format_access_failure(
+                        "server_error", 
+                        "No access token seems to be available for that code" 
+                    )
+            
+                return self._format_access_success( processor[ "access_token" ] ) 
+            
+            #determine if there has been a database error
+            except MySQLdb.Error:
+                return self._format_access_failure(
+                    "server_error", 
+                    "Database problems are currently being experienced" 
+                ) 
+
+        #determine if there has been a database error
+        except Exception:
+            return self._format_access_failure(
+                "server_error", 
+                "An unknown error has occurred" 
+            )        
 
  
     #///////////////////////////////////////////////
@@ -841,59 +927,7 @@ class AuthorizationModule( object ) :
                 cause = "reason unknown"
             
             raise RevokeException( cause )
-    
-
-    #///////////////////////////////////////////////
-    
-    
-    def _access( self, grant_type, redirect_uri, auth_code, fetch_fn ):
-
-        try:
-            if grant_type != "authorization_code" :
-                return self._format_access_failure(
-                    "unsupported_grant_type",
-                    "Grant type is either missing or incorrect"
-                )  
-                                
-            if ( auth_code is None ) :
-                return self._format_access_failure(
-                    "invalid_request",
-                    "A valid authorization code has not been provided"
-                )  
-                        
-            #so far so good. Fetch the processor that corresponds 
-            #to the auth_code that has been supplied
-            try:
-                processor = fetch_fn( auth_code )
-                
-                if processor == None :
-                    return self._format_access_failure(
-                        "invalid_grant", 
-                        "Authorization Code supplied is unrecognized" 
-                    )  
-                
-                if not processor[ "access_token" ]  :
-                    return self._format_access_failure(
-                        "server_error", 
-                        "No access token seems to be available for that code" 
-                    )
-                    
-                return self._format_access_success( processor[ "access_token" ] ) 
-            
-            #determine if there has been a database error
-            except MySQLdb.Error:
-                return self._format_access_failure(
-                    "server_error", 
-                    "Database problems are currently being experienced" 
-                ) 
-
-        #determine if there has been a database error
-        except Exception:
-            return self._format_access_failure(
-                "server_error", 
-                "An unknown error has occurred" 
-            )   
-            
+        
     
     #///////////////////////////////////////////////
         
