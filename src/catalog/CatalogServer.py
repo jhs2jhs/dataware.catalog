@@ -37,7 +37,9 @@ class std_writer( object ):
 
    
 #TODO: make sure that redirect uri's don't have a / on the end
+
 @route( "/resource_register", method = "POST" )
+@route( "/user/:user_name/resource_register", method = "GET" )
 def resource_register_endpoint():
     
     resource_name = request.forms.get( "resource_name" )   
@@ -66,8 +68,9 @@ def resource_register_endpoint():
     
 #//////////////////////////////////////////////////////////
 
-    
+
 @route( "/resource_request", method = "GET" )
+@route( "/user/:user_name/resource_request", method = "GET" )
 def resource_request_endpoint():
 
     #first check that required parameters have beeing supplied
@@ -113,6 +116,7 @@ def resource_request_endpoint():
  
 
 @route( "/resource_authorize", method = "POST" )
+@route( "/user/:user_name/resource_authorize", method = "GET" )
 def resource_authorize_endpoint():
     
     try:
@@ -147,6 +151,7 @@ def resource_authorize_endpoint():
       
 
 @route( "/resource_access", method = "GET" )
+@route( "/user/:user_name/resource_authorize", method = "GET" )
 def resource_access_endpoint():
 
     grant_type = request.GET.get( "grant_type", None )
