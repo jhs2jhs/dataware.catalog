@@ -52,9 +52,9 @@ class CatalogDB( object ):
     
     #///////////////////////////////////////
       
-    createQueries = { 
+    createQueries = [ 
                
-        TBL_CATALOG_USERS : """
+        ( TBL_CATALOG_USERS, """
             CREATE TABLE %s.%s (
                 user_id varchar(256) NOT NULL,
                 user_name varchar(64),
@@ -62,10 +62,10 @@ class CatalogDB( object ):
                 registered int(10) unsigned,            
                 PRIMARY KEY (user_id), UNIQUE KEY `UNIQUE` (`user_name`) 
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-        """  % ( DB_NAME, TBL_CATALOG_USERS ),
+        """  % ( DB_NAME, TBL_CATALOG_USERS ) ),
+                
         
-        
-        TBL_CATALOG_RESOURCES : """
+        ( TBL_CATALOG_RESOURCES, """
             CREATE TABLE %s.%s (
                 resource_id varchar(256) NOT NULL,
                 resource_name varchar(128) NOT NULL,
@@ -78,10 +78,10 @@ class CatalogDB( object ):
                 PRIMARY KEY (resource_id),
                 UNIQUE KEY `UNIQUE` (resource_name) 
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-        """  % ( DB_NAME, TBL_CATALOG_RESOURCES), 
+        """  % ( DB_NAME, TBL_CATALOG_RESOURCES) ), 
 
 
-        TBL_CATALOG_INSTALLS: """
+        ( TBL_CATALOG_INSTALLS, """
             CREATE TABLE %s.%s (
                 user_id varchar(256) NOT NULL,
                 resource_id varchar(256) NOT NULL,
@@ -93,10 +93,10 @@ class CatalogDB( object ):
                 PRIMARY KEY (user_id, resource_id), 
                 FOREIGN KEY (resource_id) REFERENCES %s(resource_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;            
-        """  % ( DB_NAME, TBL_CATALOG_INSTALLS, TBL_CATALOG_RESOURCES ),
+        """  % ( DB_NAME, TBL_CATALOG_INSTALLS, TBL_CATALOG_RESOURCES ) ),
         
         
-        TBL_CATALOG_CLIENTS : """
+        ( TBL_CATALOG_CLIENTS, """
             CREATE TABLE %s.%s (
                 client_id varchar(256) NOT NULL,
                 client_name varchar(128) NOT NULL,
@@ -109,10 +109,10 @@ class CatalogDB( object ):
                 PRIMARY KEY (client_id),
                 UNIQUE KEY `UNIQUE` (client_name) 
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-        """  % ( DB_NAME, TBL_CATALOG_CLIENTS),  
+        """  % ( DB_NAME, TBL_CATALOG_CLIENTS) ),  
         
         
-        TBL_CATALOG_PROCESSORS : """
+        ( TBL_CATALOG_PROCESSORS, """
             CREATE TABLE %s.%s (
                 processor_id int(10) unsigned NOT NULL AUTO_INCREMENT,
                 user_id varchar(256) NOT NULL,
@@ -131,8 +131,8 @@ class CatalogDB( object ):
                 UNIQUE KEY `UNIQUE` (user_id, client_id, checksum), 
                 FOREIGN KEY (user_id, resource_id) REFERENCES %s(user_id, resource_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-        """  % ( DB_NAME, TBL_CATALOG_PROCESSORS, TBL_CATALOG_INSTALLS ),      
-    } 
+        """  % ( DB_NAME, TBL_CATALOG_PROCESSORS, TBL_CATALOG_INSTALLS ) ),      
+    ]
         
     #///////////////////////////////////////
     
@@ -225,13 +225,13 @@ class CatalogDB( object ):
             FROM information_schema.`TABLES`
             WHERE table_schema='%s' """ % self.DB_NAME )
         
-        tables = [ row[ "table_name" ] for row in self.cursor.fetchall() ]
+        tables = [ row[ "table_name" ].lower() for row in self.cursor.fetchall() ]
         
         #if they don't exist for some reason, create them.    
-        for t, q in self.createQueries.iteritems():
-            if not t in tables : 
-                log.warning( "%s: Creating missing system table: '%s'" % ( self.name, t ) );
-                self.cursor.execute( q )
+        for item in self.createQueries:
+            if not item[ 0 ].lower() in tables : 
+                log.warning( "%s: Creating missing system table: '%s'" % ( self.name, item[ 0 ] ) );
+                self.cursor.execute( item[ 1 ] )
         
         self.commit()
         
