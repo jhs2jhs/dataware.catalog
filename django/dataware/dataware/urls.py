@@ -6,7 +6,7 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
     # catalog
-    #url(r'^catalog$', 
+    url(r'^catalog/', include('catalog.urls')), 
 
     # Examples:
     url(r'^$', 'dataware.views.home', name='home'),
