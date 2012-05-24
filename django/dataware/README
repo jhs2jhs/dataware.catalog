@@ -3,3 +3,7 @@ to start a project: django-admin.py startproject dataware
 to start a app in project: cd dataware; django-admin.py startapp catalog
 
 to run a server: python manage.py runserver 0.0.0.0:8000
+
+git: how to merge:
+git checkout master
+git checkout devel
