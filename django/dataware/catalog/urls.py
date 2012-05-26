@@ -7,5 +7,7 @@ urlpatterns = patterns('',
     # registeration with resource
     # INIT
     url(r'^init_resource', 'catalog.views.init_resource'),
+    # AUTH
+    url(r'^resource_grant', 'catalog.views.resource_grant'),
 
 )
