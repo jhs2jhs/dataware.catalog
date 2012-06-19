@@ -1,10 +1,15 @@
 # Create your views here.
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest
 from django.contrib.auth.decorators import login_required
+from django.template import RequestContext
+from django.shortcuts import render_to_response
 import slibs_hello
 import dwlib
 from dwlib import url_keys, request_get, url_keys
-from libauth.models import CatalogResourceRegistration as CRR
+from libauth.models import Registration as CRR # TODO needs to delete later
+from libauth.models import Registration
+from libauth.models import regist_steps, regist_dealer, REGIST_STATUS, REGIST_TYPE
+from libauth.models import find_key_by_value_regist_type, find_key_by_value_regist_status
 
 def hello(request):
     return HttpResponse("Hello, catalog")
@@ -13,26 +18,71 @@ def hello_slibs(request):
     slibs_hello.hello()
     return HttpResponse('hello, dataware shared libs')
 
-# user need to login first
-#### registeration with resource ####
+regist_callback_me = 'http://localhost:8000/catalog/regist'
+
+class regist_dealer_catalog(regist_dealer):
+    def regist_init(self):
+        regist_init_action = request_get(self.request.REQUEST, 'regist_init_action')
+        register_callback = request_get(self.request.REQUEST, url_keys.regist_callback)
+        regist_type = request_get(self.request.REQUEST, url_keys.regist_type)
+        registrant_request_scope = request_get(self.request.REQUEST, url_keys.registrant_request_scope)
+        if regist_init_action == None: # TODO or if error happened here
+            register_callback = 'http://localhost:8001/resource/regist'
+            registrant_request_scope = "{'action':'read, write', 'content':'blog, status'}" # to be confirmed
+            c = {
+                'register_callback':{
+                    'label': url_keys.regist_callback,
+                    'value': register_callback,
+                    },
+                'registrant_request_scope':{
+                    'label': url_keys.registrant_request_scope,
+                    'value': registrant_request_scope,
+                    },
+                'regist_type':{
+                    'label': url_keys.regist_type,
+                    'catalog_resource': REGIST_TYPE.catalog_resource,
+                    'client_catalog': REGIST_TYPE.client_catalog,
+                    },
+                'regist_status':{
+                    'label': url_keys.regist_status,
+                    'value': REGIST_STATUS.init,
+                    },
+                }
+            context = RequestContext(self.request, c)
+            return render_to_response('regist_init.html', context)
+        # if the input is correct, need to check regist_type
+        user = self.request.user
+        registrant_request_token = dwlib.token_create_user(register_callback, user.id) 
+        params = {
+            url_keys.regist_status: REGIST_STATUS.registrant_request,
+            url_keys.regist_type: REGIST_TYPE.catalog_resource,
+            url_keys.regist_callback: regist_callback_me,
+            url_keys.registrant_request_token: registrant_request_token,
+            url_keys.registrant_request_scope: registrant_request_scope,
+            }
+        url_params = dwlib.urlencode(params)
+        url = '%s?%s'%(register_callback, url_params)
+        regist_type_key = find_key_by_value_regist_type(regist_type)
+        regist_status_key = find_key_by_value_regist_status(REGIST_STATUS.init)
+        obj, created = Registration.objects.get_or_create(regist_type=regist_type_key, regist_status=regist_status_key, registrant_request_token=registrant_request_token, registrant_request_scope=registrant_request_scope, registrant_callback=regist_callback_me, register_callback=register_callback, user=user)
+        return HttpResponseRedirect(url)
+    def registrant_request(self): 
+        return HttpResponseRedirect('http://www.baidu.com')
+    def register_owner_redirect(self): pass
+    def register_owner_grant(self): pass
+    def register_grant(self): pass
+    def registrant_owner_redirect(self): pass
+    def registrant_owner_grant(self): pass
+    def registrant_confirm(self): pass
+    def register_activate(self): pass
+    def regist_finish(self): pass
+    
 @login_required
-def init_resource(request):
-    resource_callback = 'http://localhost:8001/resource/catalog_register'
-    catalog_callback = 'http://localhost:8000/catalog/resource_grant'
-    catalog_request_token = dwlib.token_create(resource_callback) # may need to add user login to identify, otherwise, different user can have same token at same time. 
-    catalog_access_scope = "{'action':'read, write', 'content':'blog, status'}" # to be confirmed
-    params = {
-        url_keys.catalog_callback:catalog_callback,
-        url_keys.catalog_request_token:catalog_request_token,
-        url_keys.catalog_access_scope:catalog_access_scope,
-        }
-    url_params = dwlib.urlencode(params)
-    url = '%s?%s'%(resource_callback, url_params)
-    #crr = CRR(catalog_callback=catalog_callback, catalog_request=str(catalog_temp_id), catalog_access_scope=catalog_access_scope)
-    #print crr
-    user = request.user
-    obj, created = CRR.objects.get_or_create(catalog_callback=catalog_callback, catalog_request_token=catalog_request_token, catalog_access_scope=catalog_access_scope, user=user, registration_status=1) # 1=request
-    return HttpResponseRedirect(url)
+def regist(request):
+    # if no correct status is matched
+    return regist_steps(regist_dealer_catalog(request), request)
+    
+
 
 @login_required
 def resource_grant(request):
