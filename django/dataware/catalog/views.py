@@ -8,8 +8,8 @@ import dwlib
 from dwlib import url_keys, request_get, url_keys
 from libauth.models import Registration as CRR # TODO needs to delete later
 from libauth.models import Registration
-from libauth.models import regist_steps, regist_dealer, REGIST_STATUS, REGIST_TYPE
-from libauth.models import find_key_by_value_regist_type, find_key_by_value_regist_status
+from libauth.models import regist_steps, regist_dealer, REGIST_STATUS, REGIST_TYPE, REQUEST_MEDIA
+from libauth.models import find_key_by_value_regist_type, find_key_by_value_regist_status, find_key_by_value_regist_request_media
 
 def hello(request):
     return HttpResponse("Hello, catalog")
@@ -22,14 +22,23 @@ regist_callback_me = 'http://localhost:8000/catalog/regist'
 
 class regist_dealer_catalog(regist_dealer):
     def regist_init(self):
-        regist_init_action = request_get(self.request.REQUEST, 'regist_init_action')
+        registrant_init_action = request_get(self.request.REQUEST, url_keys.registrant_init_action)
         register_callback = request_get(self.request.REQUEST, url_keys.regist_callback)
         regist_type = request_get(self.request.REQUEST, url_keys.regist_type)
         registrant_request_scope = request_get(self.request.REQUEST, url_keys.registrant_request_scope)
-        if regist_init_action == None: # TODO or if error happened here
+        registrant_request_reminder = request_get(self.request.REQUEST, url_keys.registrant_request_reminder)
+        registrant_request_media = request_get(self.request.REQUEST, url_keys.registrant_request_media)
+        registrant_request_user_public = request_get(self.request.REQUEST, url_keys.registrant_request_user_public)
+        if registrant_init_action != url_keys.registrant_init_action_value: # TODO or if error happened here
             register_callback = 'http://localhost:8001/resource/regist'
             registrant_request_scope = "{'action':'read, write', 'content':'blog, status'}" # to be confirmed
+            registrant_request_reminder = ''
+            registrant_request_user_public = ''
             c = {
+                'registrant_init_action': {
+                    'label': url_keys.registrant_init_action,
+                    'value': url_keys.registrant_init_action_value,
+                    },
                 'register_callback':{
                     'label': url_keys.regist_callback,
                     'value': register_callback,
@@ -47,9 +56,20 @@ class regist_dealer_catalog(regist_dealer):
                     'label': url_keys.regist_status,
                     'value': REGIST_STATUS.init,
                     },
+                'registrant_request_reminder': {
+                    'label': url_keys.registrant_request_reminder,
+                    'value': registrant_request_reminder,
+                    },
+                'registrant_request_user_public': {
+                    'label': url_keys.registrant_request_user_public,
+                    'value': registrant_request_user_public,
+                    },
+                'registrant_request_media' : url_keys.registrant_request_media,
+                'request_media': { r:{'label':r, 'value':r, 'desc':r} for k, r in REQUEST_MEDIA.iteritems()},
                 }
             context = RequestContext(self.request, c)
             return render_to_response('regist_init.html', context)
+        print self.request.REQUEST
         # if the input is correct, need to check regist_type
         user = self.request.user
         registrant_request_token = dwlib.token_create_user(register_callback, user.id) 
@@ -59,12 +79,28 @@ class regist_dealer_catalog(regist_dealer):
             url_keys.regist_callback: regist_callback_me,
             url_keys.registrant_request_token: registrant_request_token,
             url_keys.registrant_request_scope: registrant_request_scope,
+            url_keys.registrant_request_reminder: registrant_request_reminder,
+            url_keys.registrant_request_user_public: registrant_request_user_public,
+            url_keys.registrant_request_media: registrant_request_media,
             }
         url_params = dwlib.urlencode(params)
         url = '%s?%s'%(register_callback, url_params)
         regist_type_key = find_key_by_value_regist_type(regist_type)
         regist_status_key = find_key_by_value_regist_status(REGIST_STATUS.init)
-        obj, created = Registration.objects.get_or_create(regist_type=regist_type_key, regist_status=regist_status_key, registrant_request_token=registrant_request_token, registrant_request_scope=registrant_request_scope, registrant_callback=regist_callback_me, register_callback=register_callback, user=user)
+        #print registrant_request_media
+        registrant_request_media_key = find_key_by_value_regist_request_media(registrant_request_media)
+        #print registrant_request_media_key
+        obj, created = Registration.objects.get_or_create(
+            regist_type=regist_type_key, 
+            regist_status=regist_status_key, 
+            registrant_request_token=registrant_request_token, 
+            registrant_request_scope=registrant_request_scope, 
+            registrant_callback=regist_callback_me, 
+            register_callback=register_callback, 
+            registrant_request_reminder=registrant_request_reminder, 
+            registrant_request_user_public=registrant_request_user_public,
+            registrant_request_media=registrant_request_media_key,
+            user=user)
         return HttpResponseRedirect(url)
     def registrant_request(self): 
         return HttpResponseRedirect('http://www.baidu.com')

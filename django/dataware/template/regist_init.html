@@ -14,12 +14,22 @@ Mutual registration with resource server
 <tr>
   <td>URL</td>
   <td>Request Scope</td>
+  <td>Reminder</td>
+  <td>User Public</td>
+  <td>Request Media</td>
   <td>Action</td>
 </tr>
 <tr>
   <td><input type="text" name="{{ register_callback.label }}" value="{{ register_callback.value }}" /></td>
-  <td><input type='text' name="{{ registrant_request_scope.label }}" value="{{ registrant_request_scope.value }}"
-  <td><input type="submit" name="regist_init_action" value="Request" /></td>
+  <td><input type="text" name="{{ registrant_request_scope.label }}" value="{{ registrant_request_scope.value }}" /></td>
+  <td><input type="text" name="{{ registrant_request_reminder.label }}" value="{{ registrant_request_reminder.value }}" /></td>
+  <td><input type="text" name="{{ register_request_user_public.label }}" value="{{ register_request_user_public.value }}" /></td>
+  <td>
+    {% for key, media in request_media.iteritems %}
+    <input type="checkbox" name="{{ registrant_request_media }}" value="{{ media.value }}" > {{ media.desc }} <br>
+    {% endfor %}
+  </td>
+  <td><input type="submit" name="{{ registrant_init_action.label }}" value="{{ registrant_init_action.value }}" /></td>
 </tr>
 </table>
 <input type="hidden" name="{{ regist_type.label }}" value="{{ regist_type.catalog_resource }}" />
@@ -35,12 +45,22 @@ One-way registration with client
 <tr>
   <td>URL</td>
   <td>Request Scope</td>
+  <td>Reminder</td>
+  <td>User Public</td>
+  <td>Request Media</td>
   <td>Action</td>
 </tr>
 <tr>
   <td><input type="text" name="{{ register_callback.label }}" value="{{ register_callback.value }}" /></td>
-  <td><input type='text' name="{{ registrant_request_scope.label }}" value="{{ registrant_request_scope.value }}"
-  <td><input type="submit" name="regist_init_action" value="Request" /></td>
+  <td><input type='text' name="{{ registrant_request_scope.label }}" value="{{ registrant_request_scope.value }}" /></td>
+  <td><input type="text" name="{{ registrant_request_reminder.label }}" value="{{ registrant_request_reminder.value }}" /></td>
+  <td><input type="text" name="{{ register_request_user_public.label }}" value="{{ register_request_user_public.value }}" /></td>
+  <td>
+    {% for key, media in request_media.iteritems %}
+    <input type="checkbox" name="{{ registrant_request_media }}" value="{{ media.value }}" > {{ media.desc }} <br>
+    {% endfor %}
+  </td>
+  <td><input type="submit" name="{{ registrant_init_action.label }}" value="{{ registrant_init_action.value }}" /></td>
 </tr>
 </table>
 <input type="hidden" name="{{ regist_type.label }}" value="{{ regist_type.client_catalog }}" />
