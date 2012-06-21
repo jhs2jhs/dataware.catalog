@@ -96,24 +96,143 @@ def method_registrant_owner_redirect(request):
     context = RequestContext(request, c)
     return render_to_response("regist_owner_redirect.html", context)
 
+@login_required
 def method_registrant_owner_grant(request):
-    return HttpResponse("hello grant")
+    regist_type = request_get(request.REQUEST, url_keys.regist_type)
+    registrant_redirect_token = request_get(request.REQUEST, url_keys.registrant_redirect_token)
+    user = request.user
+    registration = Registration.objects.get(registrant_redirect_token=registrant_redirect_token)
+    regist_status_key = find_key_by_value_regist_status(REGIST_STATUS.registrant_owner_grant)
+    registration.regist_status = regist_status_key
+    registration.save() #TODO here should be error possible that registrant does not want to grant this permission, so that registraiton will be stop. 
+    c = {
+        "regist_callback":registration.register_callback,
+        "regist_request_token":registration.register_request_token,
+        "regist_request_scope":registration.register_request_scope,
+        "regist_request_reminder":registration.register_request_reminder,
+        "regist_redirect_action":{
+            'label':url_keys.regist_redirect_action,
+            'grant':url_keys.regist_redirect_action_grant,
+            'modify_scope': url_keys.regist_redirect_action_modify_scope,
+            'wrong_user': url_keys.regist_redirect_action_wrong_user,
+            },
+        'regist_status':{
+            'label': url_keys.regist_status,
+            'value': REGIST_STATUS.registrant_confirm,
+            },
+        "registrant_redirect_token":{
+            'label': url_keys.registrant_redirect_token,
+            'value': registrant_redirect_token,
+            },
+        'regist_type':{
+            'label': url_keys.regist_type,
+            'value': REGIST_TYPE.catalog_resource,
+            },
+        }
+    context = RequestContext(request, c)
+    return render_to_response("regist_owner_grant.html", context)
+
+def method_registrant_confirm(request):
+    print request.REQUEST
+    user = request.user
+    registrant_redirect_token = request_get(request.REQUEST, url_keys.registrant_redirect_token)
+    regist_type = request_get(request.REQUEST, url_keys.regist_type)
+    try:
+        print request_get(request.REQUEST, url_keys.registrant_request_action)
+        print url_keys.registrant_request_action_confirm
+        if request_get(request.REQUEST, url_keys.registrant_request_action) == url_keys.registrant_request_action_confirm:
+            print "hello"
+            registrant_access_token = request_get(request.REQUEST, url_keys.registrant_access_token)
+            #print registrant_request_token
+            registration = Registration.objects.get(registrant_access_token=registrant_access_token)
+            print registration
+            if registration.user != user :
+                return error_response(2, ("user"))
+            registrant_access_token = request_get(request.REQUEST, url_keys.registrant_access_token)
+            if registration.registrant_access_token != registrant_access_token:
+                return error_response(2, (url_keys.registrant_access_token))
+            params = {
+                url_keys.regist_status: REGIST_STATUS.register_activate,#TODO some error here
+                url_keys.regist_type: regist_type,
+                url_keys.regist_callback: regist_callback_me,
+                url_keys.registrant_access_token: registration.registrant_access_token,
+                url_keys.registrant_access_validate: registration.registrant_access_validate,
+                url_keys.register_access_token: registration.register_access_token,
+                }
+            url_params = dwlib.urlencode(params)
+            url = '%s?%s'%(registration.register_callback, url_params)
+            return HttpResponseRedirect(url)
+        registration = Registration.objects.get(registrant_redirect_token=registrant_redirect_token)
+        regist_status_key = find_key_by_value_regist_status(REGIST_STATUS.registrant_owner_grant)
+    except ObjectDoesNotExist:
+        return error_response(3, (url_keys.registrant_redirect_token, registrant_redirect_token))
+    regist_status_key = find_key_by_value_regist_status(REGIST_STATUS.registrant_confirm)
+    registration.regist_status = regist_status_key
+    registrant_access_token = dwlib.token_create_user(registration.register_callback, TOKEN_TYPE.access, user.id)
+    registrant_access_validate = registration.register_request_scope #TODO need to expand here
+    registration.registrant_access_token = registrant_access_token
+    registration.registrant_access_validate = registrant_access_validate
+    registration.save()
+    params = {
+        url_keys.regist_status: REGIST_STATUS.registrant_confirm, # for mutual registraiton it is different, user need to decide here, TODO, if it now ok to call this status?
+        url_keys.regist_type: regist_type,
+        url_keys.regist_callback: regist_callback_me,
+        url_keys.registrant_access_token: registrant_access_token,
+        url_keys.registrant_access_validate: registrant_access_validate,
+        url_keys.register_access_token: registration.register_access_token,
+        } 
+    url_params = dwlib.urlencode(params)
+    url = '%s?%s'%(registration.register_callback, url_params)
+    c = {
+        'regist_grant_url': url,
+        'registrant_request_action':{
+            'label': url_keys.registrant_request_action,
+            'confirm': url_keys.registrant_request_action_confirm,
+            },
+        'registrant_access_token': {
+            'label': url_keys.registrant_access_token,
+            'value': registrant_access_token,
+            },
+        'registrant_access_validate': {
+            'label': url_keys.registrant_access_validate,
+            'value': registrant_access_validate,
+            },
+        'regist_status':{
+            'label': url_keys.regist_status,
+            'value': REGIST_STATUS.registrant_confirm,
+            },
+        'regist_type':{ # need to add into template files
+            'label': url_keys.regist_type,
+            'value':regist_type,
+            },
+        'regist_confirm_token': {
+            'label': url_keys.registrant_access_token,
+            'value': registration.registrant_access_token,
+            },
+        }
+    context = RequestContext(request, c)
+    return render_to_response("regist_confirm.html", context)
+    #return HttpResponse("hello grant")
+
+
 
 
 class regist_dealer_catalog(regist_dealer):
     def regist_init(self):
         user = self.request.user
+        print user
         if not user.is_authenticated():
             params = {
                 url_keys.regist_status: REGIST_STATUS.init,
-                url_keys.regist_type: regist_type,
+                url_keys.regist_type: REGIST_TYPE.catalog_resource, # in v0.2.2, it does not need to know regist_type over here. 
                 }
             url_params = dwlib.urlencode(params)
             url = '%s?%s'%(regist_callback_me, url_params)
             next_params = {
                 "next":url
                 }
-            next_url_params = dwlib.urlencode(params)
+            next_url_params = dwlib.urlencode(next_params)
+            print next_url_params
             return HttpResponseRedirect('/accounts/login?%s'%next_url_params)
         registrant_init_action = request_get(self.request.REQUEST, url_keys.registrant_init_action)
         register_callback = request_get(self.request.REQUEST, url_keys.regist_callback)
@@ -235,7 +354,8 @@ class regist_dealer_catalog(regist_dealer):
         return method_registrant_owner_redirect(self.request)
     def registrant_owner_grant(self): 
         return method_registrant_owner_grant(self.request)
-    def registrant_confirm(self): pass
+    def registrant_confirm(self): 
+        return method_registrant_confirm(self.request)
     def register_activate(self): pass
     def regist_finish(self): pass
   

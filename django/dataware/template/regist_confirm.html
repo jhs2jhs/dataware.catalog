@@ -1,0 +1,26 @@
+{% extends "./base.html" %}
+
+{% block content %}
+
+<form method="post" action="regist">
+<input type="hidden" name="{{ regist_confirm_token.label }}" value="{{ regist_confirm_token.value }}" />
+<input type="hidden" name="{{ regist_status.label }}" value="{{ regist_status.value }}" />
+<input type="hidden" name="{{ regist_type.label }}" value="{{ regist_type.value }}" />
+{% csrf_token %}
+<div>
+<table>
+You granted this permission and want to confirm your confirmation:
+</tr>
+<tr> <td>Access_token: {{ register_access_token.value }} </td> </tr>
+<tr> <td>Access_Validation: {{ register_access_validate.value }} </td> </tr>
+<tr> <td>Grant_User: {{ user.username }} </td> </tr>
+<tr> <td><textarea rows="10" cols="50"><a href="{{ regist_grant_url }}"> {{ regist_grant_url }} </a></textarea> </td> </tr>
+</table>
+</div>
+
+<input type="submit" name="{{ registrant_request_action.label }}" value="{{ registrant_request_action.confirm }}" /> 
+
+</form>
+
+{% endblock %}
+

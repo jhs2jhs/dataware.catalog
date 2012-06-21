@@ -3,11 +3,11 @@
 {% block content %}
 
 <form method="post" action="regist">
-<input type="hidden" name="{{ register_redirect_token.label }}" value="{{ register_redirect_token.value }}" />
+<input type="hidden" name="{{ registrant_redirect_token.label }}" value="{{ registrant_redirect_token.value }}" />
 <input type="hidden" name="{{ regist_status.label }}" value="{{ regist_status.value }}" />
 <input type="hidden" name="{{ regist_type.label }}" value="{{ regist_type.value }}" />
 {% csrf_token %}
-Do you want to grant this permission?<br><br>
+Do you want to grant this permission to confirm your registration on his side?<br><br>
 <div>
 <table>
 Request:
