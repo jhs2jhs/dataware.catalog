@@ -127,7 +127,7 @@ def method_registrant_owner_grant(request):
             },
         'regist_type':{
             'label': url_keys.regist_type,
-            'value': REGIST_TYPE.catalog_resource,
+            'value': REGIST_TYPE['catalog_resource'],
             },
         }
     context = RequestContext(request, c)
@@ -225,7 +225,7 @@ class regist_dealer_catalog(regist_dealer):
         if not user.is_authenticated():
             params = {
                 url_keys.regist_status: REGIST_STATUS.init,
-                url_keys.regist_type: REGIST_TYPE.catalog_resource, # in v0.2.2, it does not need to know regist_type over here. 
+                url_keys.regist_type: REGIST_TYPE['catalog_resource'], # in v0.2.2, it does not need to know regist_type over here. 
                 }
             url_params = dwlib.urlencode(params)
             url = '%s?%s'%(regist_callback_me, url_params)
@@ -262,8 +262,8 @@ class regist_dealer_catalog(regist_dealer):
                     },
                 'regist_type':{
                     'label': url_keys.regist_type,
-                    'catalog_resource': REGIST_TYPE.catalog_resource,
-                    'client_catalog': REGIST_TYPE.client_catalog,
+                    'catalog_resource': REGIST_TYPE['catalog_resource'],
+                    'client_catalog': REGIST_TYPE['client_catalog'],
                     },
                 'regist_status':{
                     'label': url_keys.regist_status,
@@ -299,7 +299,7 @@ class regist_dealer_catalog(regist_dealer):
                 registrant_request_media = REQUEST_MEDIA['desktop_browser']
             params = {
                 url_keys.regist_status: REGIST_STATUS.register_owner_redirect, #
-                url_keys.regist_type: REGIST_TYPE.catalog_resource,
+                url_keys.regist_type: REGIST_TYPE['catalog_resource'],
                 url_keys.regist_callback: regist_callback_me,
                 url_keys.registrant_request_token: registrant_request_token,
                 url_keys.registrant_request_scope: registrant_request_scope,
@@ -310,6 +310,7 @@ class regist_dealer_catalog(regist_dealer):
             url_params = dwlib.urlencode(params)
             url = '%s?%s'%(register_callback, url_params)
             regist_type_key = find_key_by_value_regist_type(regist_type)
+            print regist_type_key, "hhhhhhhhhhh"
             regist_status_key = find_key_by_value_regist_status(REGIST_STATUS.registrant_request) #
             #print url
             print self.request.REQUEST
