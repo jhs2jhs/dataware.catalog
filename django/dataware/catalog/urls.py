@@ -4,12 +4,6 @@ urlpatterns = patterns('',
     url(r'^hello', 'catalog.views.hello'),
     url(r'^slibs', 'catalog.views.hello_slibs'),
 
-    url(r'^regist', 'catalog.views.regist'),
-
-    # registeration with resource
-    # INIT
-    #url(r'^init_resource', 'catalog.views.init_resource'),
-    # AUTH
-    #url(r'^resource_grant', 'catalog.views.resource_grant'),
+    url(r'^regist$', 'catalog.views.regist'),
 
 )

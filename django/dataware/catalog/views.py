@@ -7,13 +7,13 @@ from django.core.exceptions import ObjectDoesNotExist
 import slibs_hello
 import dwlib
 from dwlib import url_keys, request_get, url_keys, error_response
-from libauth.models import Registration as CRR # TODO needs to delete later
 from libauth.models import Registration
 from libauth.models import regist_steps, regist_dealer, REGIST_STATUS, REGIST_TYPE, REQUEST_MEDIA, TOKEN_TYPE
 from libauth.models import find_key_by_value_regist_type, find_key_by_value_regist_status, find_key_by_value_regist_request_media
 
 def hello(request):
-    return HttpResponse("Hello, catalog")
+    #return HttpResponse("Hello, catalog")
+    return render_to_response("hello_test.html", {'name': 'catalog'})
 
 def hello_slibs(request):
     slibs_hello.hello()
@@ -364,42 +364,5 @@ def regist(request):
     # if no correct status is matched
     return regist_steps(regist_dealer_catalog(request), request)
     
-
-
-@login_required
-def resource_grant(request):
-    params = request.REQUEST
-    catalog_request_token = request_get(params, url_keys.catalog_request_token)
-    resource_access_token = request_get(params, url_keys.resource_access_token)
-    resource_request_token = request_get(params, url_keys.resource_request_token)
-    resource_validate_code = request_get(params, url_keys.resource_validate_code)
-    resource_callback = request_get(params, url_keys.resource_callback)
-    resource_access_scope = request_get(params, url_keys.resource_access_scope)
-
-    crr = CRR.objects.get(catalog_request_token=catalog_request_token)
-    user_id = crr.user.id
-    catalog_access_token = dwlib.token_create_user(resource_callback, TOKEN_TYPE.request, user_id)
-    catalog_validate_token = 'expire in 10 hours'
-    crr.catalog_access_token = catalog_access_token
-    crr.catalog_validate_code = catalog_validate_token
-    crr.resource_access_token = resource_access_token
-    crr.resource_request_token = resource_request_token
-    crr.resource_validate_code = resource_validate_code
-    crr.resource_callback = resource_callback
-    crr.resource_access_scope = resource_access_scope
-    crr.registration_status = 4 # 4=auth
-    crr.save()
-    
-    params = {
-        url_keys.catalog_access_token:catalog_access_token,
-        url_keys.catalog_validate_token:catalog_validate_token,
-        url_keys.resource_access_token:resource_access_token,
-        }
-    url_params = dwlib.urlencode(params)
-    url = '%s?%s'%(resource_callback, url_params)
-    return HttpResponseRedirect(url)
-    
-
-
     
     
