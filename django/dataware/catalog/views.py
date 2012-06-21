@@ -11,6 +11,7 @@ from libauth.models import Registration
 from libauth.models import REGIST_STATUS, REGIST_TYPE, REQUEST_MEDIA, TOKEN_TYPE
 from libauth.models import find_key_by_value_regist_type, find_key_by_value_regist_status, find_key_by_value_regist_request_media
 from libauth.views import regist_steps, regist_dealer
+from libauth.views import method_regist_init
 
 def hello(request):
     #return HttpResponse("Hello, catalog")
@@ -220,68 +221,7 @@ def method_registrant_confirm(request):
 
 class regist_dealer_catalog(regist_dealer):
     def regist_init(self):
-        user = self.request.user
-        print user
-        if not user.is_authenticated():
-            params = {
-                url_keys.regist_status: REGIST_STATUS.init,
-                url_keys.regist_type: REGIST_TYPE['catalog_resource'], # in v0.2.2, it does not need to know regist_type over here. 
-                }
-            url_params = dwlib.urlencode(params)
-            url = '%s?%s'%(regist_callback_me, url_params)
-            next_params = {
-                "next":url
-                }
-            next_url_params = dwlib.urlencode(next_params)
-            print next_url_params
-            return HttpResponseRedirect('/accounts/login?%s'%next_url_params)
-        registrant_init_action = request_get(self.request.REQUEST, url_keys.registrant_init_action)
-        register_callback = request_get(self.request.REQUEST, url_keys.regist_callback)
-        regist_type = request_get(self.request.REQUEST, url_keys.regist_type)
-        registrant_request_scope = request_get(self.request.REQUEST, url_keys.registrant_request_scope)
-        registrant_request_reminder = request_get(self.request.REQUEST, url_keys.registrant_request_reminder)
-        registrant_request_media = request_get(self.request.REQUEST, url_keys.registrant_request_media)
-        registrant_request_user_public = request_get(self.request.REQUEST, url_keys.registrant_request_user_public)
-        if registrant_init_action == None or (registrant_init_action != url_keys.registrant_init_action_generate and registrant_init_action != url_keys.registrant_init_action_request): # TODO or if error happened here
-            register_callback = 'http://localhost:8001/resource/regist'
-            registrant_request_scope = "{'action':'read, write', 'content':'blog, status'}" # to be confirmed
-            registrant_request_reminder = ''
-            registrant_request_user_public = ''
-            c = {
-                'registrant_init_action': {
-                    'label': url_keys.registrant_init_action,
-                    'value': url_keys.registrant_init_action_generate,
-                    },
-                'register_callback':{
-                    'label': url_keys.regist_callback,
-                    'value': register_callback,
-                    },
-                'registrant_request_scope':{
-                    'label': url_keys.registrant_request_scope,
-                    'value': registrant_request_scope,
-                    },
-                'regist_type':{
-                    'label': url_keys.regist_type,
-                    'catalog_resource': REGIST_TYPE['catalog_resource'],
-                    'client_catalog': REGIST_TYPE['client_catalog'],
-                    },
-                'regist_status':{
-                    'label': url_keys.regist_status,
-                    'value': REGIST_STATUS['registrant_request'],
-                    },
-                'registrant_request_reminder': {
-                    'label': url_keys.registrant_request_reminder,
-                    'value': registrant_request_reminder,
-                    },
-                'registrant_request_user_public': {
-                    'label': url_keys.registrant_request_user_public,
-                    'value': registrant_request_user_public,
-                    },
-                'registrant_request_media' : url_keys.registrant_request_media,
-                'request_media': { r:{'label':r, 'value':r, 'desc':r} for k, r in REQUEST_MEDIA.iteritems()},
-                }
-            context = RequestContext(self.request, c)
-            return render_to_response('regist_init.html', context)
+        return method_regist_init(self.request)
     def registrant_request(self): 
         #TODO check whether user login or not
         registrant_init_action = request_get(self.request.REQUEST, url_keys.registrant_init_action)
