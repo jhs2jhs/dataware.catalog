@@ -8,8 +8,9 @@ import slibs_hello
 import dwlib
 from dwlib import url_keys, request_get, url_keys, error_response
 from libauth.models import Registration
-from libauth.models import regist_steps, regist_dealer, REGIST_STATUS, REGIST_TYPE, REQUEST_MEDIA, TOKEN_TYPE
+from libauth.models import REGIST_STATUS, REGIST_TYPE, REQUEST_MEDIA, TOKEN_TYPE
 from libauth.models import find_key_by_value_regist_type, find_key_by_value_regist_status, find_key_by_value_regist_request_media
+from libauth.views import regist_steps, regist_dealer
 
 def hello(request):
     #return HttpResponse("Hello, catalog")
