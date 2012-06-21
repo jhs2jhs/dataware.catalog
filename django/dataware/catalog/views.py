@@ -50,7 +50,7 @@ def method_registrant_owner_redirect(request):
     register_access_validate = request_get(request.REQUEST, url_keys.register_access_validate)
     register_request_token = request_get(request.REQUEST, url_keys.register_request_token)
     register_request_scope = request_get(request.REQUEST, url_keys.register_request_scope) # may check it is in scope or not
-    registrant_redirect_token = dwlib.token_create(register_callback, TOKEN_TYPE.redirect)
+    registrant_redirect_token = dwlib.token_create(register_callback, TOKEN_TYPE['redirect'])
     registration.register_callback = register_callback
     registration.register_acess_token = register_access_token
     registration.register_access_token = register_access_token
@@ -60,14 +60,14 @@ def method_registrant_owner_redirect(request):
     registration.registrant_redirect_token = registrant_redirect_token
     registration.save()
     params = {
-        url_keys.regist_status: REGIST_STATUS.registrant_owner_grant,
+        url_keys.regist_status: REGIST_STATUS['registrant_owner_grant'],
         url_keys.regist_type: regist_type,
         url_keys.registrant_redirect_token:registrant_redirect_token,
         }
     url_params = dwlib.urlencode(params)
     url = '%s?%s'%(regist_callback_me, url_params)
     regist_type_key = find_key_by_value_regist_type(regist_type)
-    regist_status_key = find_key_by_value_regist_status(REGIST_STATUS.registrant_owner_redirect)
+    regist_status_key = find_key_by_value_regist_status(REGIST_STATUS['registrant_owner_redirect'])
     c = {
         "registrant_request_token": registration.registrant_request_token,
         "registrant_request_scope":registration.registrant_request_scope,
@@ -82,7 +82,7 @@ def method_registrant_owner_redirect(request):
             },
         'regist_status':{
             'label': url_keys.regist_status,
-            'value': REGIST_STATUS.registrant_owner_redirect,
+            'value': REGIST_STATUS['registrant_owner_redirect'],
             },
         'registrant_redirect_action':{
             'label': url_keys.regist_redirect_action,
@@ -103,7 +103,7 @@ def method_registrant_owner_grant(request):
     registrant_redirect_token = request_get(request.REQUEST, url_keys.registrant_redirect_token)
     user = request.user
     registration = Registration.objects.get(registrant_redirect_token=registrant_redirect_token)
-    regist_status_key = find_key_by_value_regist_status(REGIST_STATUS.registrant_owner_grant)
+    regist_status_key = find_key_by_value_regist_status(REGIST_STATUS['registrant_owner_grant'])
     registration.regist_status = regist_status_key
     registration.save() #TODO here should be error possible that registrant does not want to grant this permission, so that registraiton will be stop. 
     c = {
@@ -267,7 +267,7 @@ class regist_dealer_catalog(regist_dealer):
                     },
                 'regist_status':{
                     'label': url_keys.regist_status,
-                    'value': REGIST_STATUS.registrant_request,
+                    'value': REGIST_STATUS['registrant_request'],
                     },
                 'registrant_request_reminder': {
                     'label': url_keys.registrant_request_reminder,
@@ -294,11 +294,11 @@ class regist_dealer_catalog(regist_dealer):
         if registrant_init_action == url_keys.registrant_init_action_generate:
         # if the input is correct, need to check regist_type
             user = self.request.user
-            registrant_request_token = dwlib.token_create_user(register_callback, TOKEN_TYPE.request, user.id) 
+            registrant_request_token = dwlib.token_create_user(register_callback, TOKEN_TYPE['request'], user.id) 
             if registrant_request_media == None:
                 registrant_request_media = REQUEST_MEDIA['desktop_browser']
             params = {
-                url_keys.regist_status: REGIST_STATUS.register_owner_redirect, #
+                url_keys.regist_status: REGIST_STATUS['register_owner_redirect'], #
                 url_keys.regist_type: REGIST_TYPE['catalog_resource'],
                 url_keys.regist_callback: regist_callback_me,
                 url_keys.registrant_request_token: registrant_request_token,
@@ -311,7 +311,7 @@ class regist_dealer_catalog(regist_dealer):
             url = '%s?%s'%(register_callback, url_params)
             regist_type_key = find_key_by_value_regist_type(regist_type)
             print regist_type_key, "hhhhhhhhhhh"
-            regist_status_key = find_key_by_value_regist_status(REGIST_STATUS.registrant_request) #
+            regist_status_key = find_key_by_value_regist_status(REGIST_STATUS['registrant_request']) #
             #print url
             print self.request.REQUEST
             print params
@@ -340,7 +340,7 @@ class regist_dealer_catalog(regist_dealer):
                     },
                 'regist_status':{
                     'label': url_keys.regist_status,
-                    'value': REGIST_STATUS.registrant_request,
+                    'value': REGIST_STATUS['registrant_request'],
                     },
                 }
             context = RequestContext(self.request, c)
