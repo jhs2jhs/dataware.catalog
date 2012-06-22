@@ -11,7 +11,7 @@ from libauth.models import Registration
 from libauth.models import REGIST_STATUS, REGIST_TYPE, REQUEST_MEDIA, TOKEN_TYPE
 from libauth.models import find_key_by_value_regist_type, find_key_by_value_regist_status, find_key_by_value_regist_request_media
 from libauth.views import regist_steps, regist_dealer
-from libauth.views import method_regist_init, method_registrant_request
+from libauth.views import method_regist_init, method_registrant_request, method_registrant_owner_redirect
 
 def hello(request):
     #return HttpResponse("Hello, catalog")
@@ -23,7 +23,7 @@ def hello_slibs(request):
 
 regist_callback_me = 'http://localhost:8000/catalog/regist'
 
-
+'''
 def method_registrant_owner_redirect(request):
     registration_redirect_action = request_get(request.REQUEST, url_keys.regist_redirect_action)
     #TODO check if the user is the stored user in db
@@ -97,6 +97,7 @@ def method_registrant_owner_redirect(request):
         }
     context = RequestContext(request, c)
     return render_to_response("regist_owner_redirect.html", context)
+'''
 
 @login_required
 def method_registrant_owner_grant(request):
@@ -228,7 +229,7 @@ class regist_dealer_catalog(regist_dealer):
     def register_owner_grant(self): pass
     def register_grant(self): pass
     def registrant_owner_redirect(self): 
-        return method_registrant_owner_redirect(self.request)
+        return method_registrant_owner_redirect(self.request, regist_callback_me)
     def registrant_owner_grant(self): 
         return method_registrant_owner_grant(self.request)
     def registrant_confirm(self): 
