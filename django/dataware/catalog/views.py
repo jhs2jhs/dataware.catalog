@@ -23,7 +23,6 @@ def hello_slibs(request):
 
 regist_callback_me = 'http://localhost:8000/catalog/regist'
 
-
 class regist_dealer_catalog(regist_dealer):
     def regist_init(self):
         return method_regist_init(self.request)
