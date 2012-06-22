@@ -11,7 +11,7 @@ from libauth.models import Registration
 from libauth.models import REGIST_STATUS, REGIST_TYPE, REQUEST_MEDIA, TOKEN_TYPE
 from libauth.models import find_key_by_value_regist_type, find_key_by_value_regist_status, find_key_by_value_regist_request_media
 from libauth.views import regist_steps, regist_dealer
-from libauth.views import method_regist_init
+from libauth.views import method_regist_init, method_registrant_request
 
 def hello(request):
     #return HttpResponse("Hello, catalog")
@@ -223,72 +223,7 @@ class regist_dealer_catalog(regist_dealer):
     def regist_init(self):
         return method_regist_init(self.request)
     def registrant_request(self): 
-        #TODO check whether user login or not
-        registrant_init_action = request_get(self.request.REQUEST, url_keys.registrant_init_action)
-        register_callback = request_get(self.request.REQUEST, url_keys.regist_callback)
-        regist_type = request_get(self.request.REQUEST, url_keys.regist_type)
-        registrant_request_scope = request_get(self.request.REQUEST, url_keys.registrant_request_scope)
-        registrant_request_reminder = request_get(self.request.REQUEST, url_keys.registrant_request_reminder)
-        registrant_request_media = request_get(self.request.REQUEST, url_keys.registrant_request_media)
-        registrant_request_user_public = request_get(self.request.REQUEST, url_keys.registrant_request_user_public)
-        if registrant_init_action == url_keys.registrant_init_action_generate:
-        # if the input is correct, need to check regist_type
-            user = self.request.user
-            registrant_request_token = dwlib.token_create_user(register_callback, TOKEN_TYPE['request'], user.id) 
-            if registrant_request_media == None:
-                registrant_request_media = REQUEST_MEDIA['desktop_browser']
-            params = {
-                url_keys.regist_status: REGIST_STATUS['register_owner_redirect'], #
-                url_keys.regist_type: REGIST_TYPE['catalog_resource'],
-                url_keys.regist_callback: regist_callback_me,
-                url_keys.registrant_request_token: registrant_request_token,
-                url_keys.registrant_request_scope: registrant_request_scope,
-                url_keys.registrant_request_reminder: registrant_request_reminder,
-                url_keys.registrant_request_user_public: registrant_request_user_public,
-                url_keys.registrant_request_media: registrant_request_media,
-                }
-            url_params = dwlib.urlencode(params)
-            url = '%s?%s'%(register_callback, url_params)
-            regist_type_key = find_key_by_value_regist_type(regist_type)
-            print regist_type_key, "hhhhhhhhhhh"
-            regist_status_key = find_key_by_value_regist_status(REGIST_STATUS['registrant_request']) #
-            #print url
-            print self.request.REQUEST
-            print params
-            #print registrant_request_media
-            registrant_request_media_key = find_key_by_value_regist_request_media(registrant_request_media)
-            #print registrant_request_media_key
-            obj, created = Registration.objects.get_or_create(
-                regist_type=regist_type_key, 
-                regist_status=regist_status_key, 
-                registrant_request_token=registrant_request_token, 
-                registrant_request_scope=registrant_request_scope, 
-                registrant_callback=regist_callback_me, 
-                register_callback=register_callback, 
-                registrant_request_reminder=registrant_request_reminder, 
-                registrant_request_user_public=registrant_request_user_public,
-                registrant_request_media=registrant_request_media_key,
-                user=user)
-            c = {
-                'request_url': {
-                    'label': 'regist_request_url',
-                    'value': url,
-                    },
-                'registrant_init_action': {
-                    'label': url_keys.registrant_init_action,
-                    'value': url_keys.registrant_init_action_request,
-                    },
-                'regist_status':{
-                    'label': url_keys.regist_status,
-                    'value': REGIST_STATUS['registrant_request'],
-                    },
-                }
-            context = RequestContext(self.request, c)
-            return render_to_response('regist_init_generate.html', context)
-        if registrant_init_action == url_keys.registrant_init_action_request:
-            request_url = request_get(self.request.REQUEST, "regist_request_url")
-            print request_url
-            return HttpResponseRedirect(request_url)
+        return method_registrant_request(self.request, regist_callback_me)
     def register_owner_redirect(self): pass
     def register_owner_grant(self): pass
     def register_grant(self): pass
