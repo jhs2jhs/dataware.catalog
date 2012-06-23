@@ -11,7 +11,7 @@ from libauth.models import Registration
 from libauth.models import REGIST_STATUS, REGIST_TYPE, REQUEST_MEDIA, TOKEN_TYPE
 from libauth.models import find_key_by_value_regist_type, find_key_by_value_regist_status, find_key_by_value_regist_request_media
 from libauth.views import regist_steps, regist_dealer
-from libauth.views import method_regist_init, method_registrant_request, method_registrant_owner_redirect, method_registrant_owner_grant, method_registrant_confirm
+#from libauth.views import method_regist_init, method_registrant_request, method_registrant_owner_redirect, method_registrant_owner_grant, method_registrant_confirm
 
 def hello(request):
     #return HttpResponse("Hello, catalog")
@@ -23,6 +23,7 @@ def hello_slibs(request):
 
 regist_callback_me = 'http://localhost:8000/catalog/regist'
 
+'''
 class regist_dealer_catalog(regist_dealer):
     def regist_init(self):
         return method_regist_init(self.request)
@@ -39,11 +40,13 @@ class regist_dealer_catalog(regist_dealer):
         return method_registrant_confirm(self.request, regist_callback_me)
     def register_activate(self): pass
     def regist_finish(self): pass
+'''
   
 #@login_required  
 def regist(request):
     # if no correct status is matched
-    return regist_steps(regist_dealer_catalog(request), request)
+    #return regist_steps(regist_dealer_catalog(request), request)
+    return regist_steps(request, regist_callback_me)
     
     
     
